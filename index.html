@@ -781,6 +781,10 @@ body.hall-bd #labels .lab span{border-left:2px solid var(--acc,rgba(127,211,255,
 .hud-btn{border-radius:10px!important}
 #tip,#htCap{border-radius:14px!important}#toast{border-radius:10px!important}
 #tip{border-left:2px solid var(--sig)!important}
+/* controls hint (drag to orbit / scroll to descend ...): glass card, brighter text, keys as keycaps */
+.hint{padding:9px 14px 10px;background:var(--lg-sheen),rgba(6,10,18,.24);border:1px solid var(--lg-edge);border-radius:12px;-webkit-backdrop-filter:blur(4px) saturate(1.5) brightness(.8);backdrop-filter:blur(4px) saturate(1.5) brightness(.8);box-shadow:var(--lg-rim),0 10px 28px rgba(0,0,0,.3);
+  font-size:10.5px!important;font-weight:500!important;font-stretch:87.5%!important;line-height:2.15!important;letter-spacing:.12em!important;color:#dbe6f0!important;text-shadow:var(--lg-halo)}
+.hint b{display:inline-block;min-width:20px;padding:0 6px;line-height:18px;text-align:center;font-weight:700;color:#fff;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);border-bottom-width:2px;border-radius:5px;box-shadow:inset 0 1px 0 rgba(255,255,255,.2);text-shadow:none}
 </style>
 </head><body>
 <input id="enter-toggle" type="checkbox" aria-hidden="true" tabindex="-1">
@@ -3142,7 +3146,7 @@ try{(function(){
  const ttCam=now=>{const u=Math.min(1,(now-TT.t0)/TT.dur),e=u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;const f=TT.from,t=TT.to;
    return {pos:f.pos.map((v,i)=>v+(t.pos[i]-v)*e),tgt:f.tgt.map((v,i)=>v+(t.tgt[i]-v)*e)};};
  const placeGo=()=>{if(!tb)return;const pan=document.querySelector('.panel');const on=document.body.classList.contains('hall-bd')&&!TT.on;
-   tb.classList.toggle('on',on);if(on&&pan){const r=pan.getBoundingClientRect(),bw=tb.offsetWidth||170;if(r.top-46>=80||r.right+12+bw>innerWidth-16){tb.style.top=Math.max(80,r.top-46)+'px';tb.style.left=r.left+'px';}else{tb.style.top=r.top+'px';tb.style.left=(r.right+12)+'px';}}/* keep the depth gauge (and its glass plate) clear of the controls hint above it */const g=document.querySelector('.gauge'),hn=document.querySelector('.hint');if(g){g.style.height='';g.style.marginTop='';if(hn&&hn.offsetParent!==null){const hb=hn.getBoundingClientRect().bottom+10,gt=g.getBoundingClientRect().top-44;if(gt<hb){const d=hb-gt;g.style.height=Math.max(260,g.offsetHeight-d)+'px';g.style.marginTop=(d/2)+'px';}}}};
+   tb.classList.toggle('on',on);if(on&&pan){const r=pan.getBoundingClientRect(),bw=tb.offsetWidth||170;if(r.top-46>=80||r.right+12+bw>innerWidth-16){tb.style.top=Math.max(80,r.top-46)+'px';tb.style.left=r.left+'px';}else{let t=r.top;const hr=document.querySelector('.hint'),h=hr&&hr.offsetParent!==null?hr.getBoundingClientRect():null;if(h&&r.right+12+bw>h.left&&t<h.bottom+8&&t+36>h.top-8)t=r.bottom-36;tb.style.top=t+'px';tb.style.left=(r.right+12)+'px';}}/* keep the depth gauge (and its glass plate) clear of the controls hint above it */const g=document.querySelector('.gauge'),hn=document.querySelector('.hint');if(g){g.style.height='';g.style.marginTop='';if(hn&&hn.offsetParent!==null){const hb=hn.getBoundingClientRect().bottom+10,gt=g.getBoundingClientRect().top-44;if(gt<hb){const d=hb-gt;g.style.height=Math.max(260,g.offsetHeight-d)+'px';g.style.marginTop=(d/2)+'px';}}}};
  setInterval(placeGo,300);
  let K=0,lt=0;
  window.__GBbdTick=now=>{
