@@ -750,6 +750,16 @@ body.at-fork #fork{grid-template-columns:repeat(6,1fr)!important}
   #fork button svg.fi{margin-right:0;vertical-align:0}
 }
 @media (min-width:781px) and (max-height:520px) and (orientation:landscape){#fork button{height:34px!important}}
+/* depth gauge legibility: dark glass plate behind the ladder + brighter labels, so Utility→Atom reads over bright scenes */
+.gauge:before{content:'';position:absolute;z-index:-1;top:-44px;bottom:-16px;left:-40px;right:12px;background:linear-gradient(90deg,rgba(6,10,18,.5),rgba(6,10,18,.78) 30%);border:1px solid rgba(120,205,255,.14);border-radius:10px;-webkit-backdrop-filter:blur(14px) saturate(.8);backdrop-filter:blur(14px) saturate(.8)}
+.gauge-head{color:var(--sub)!important}
+#ladder button{color:#c9d5e2;text-shadow:0 1px 3px rgba(0,0,0,.85)}
+#ladder button span:first-child{color:#9fb0c2!important}
+#ladder button:before{background:#9fb0c2;opacity:.8}
+#ladder button:hover,#ladder button.on{color:#fff}
+#ladder button.on span:first-child{color:var(--sig)!important}
+.rail .tick b{color:var(--sub);text-shadow:0 1px 3px rgba(0,0,0,.85)}
+.rail .tick.major b{color:var(--ink)}
 </style>
 </head><body>
 <input id="enter-toggle" type="checkbox" aria-hidden="true" tabindex="-1">
