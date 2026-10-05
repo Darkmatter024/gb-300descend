@@ -743,6 +743,13 @@ body.hall-bd[data-path=nvlink] #labels .lab.lab-rack span{border-color:var(--acc
 /* six paths: one row on wide screens, two rows of three on phones */
 body.at-fork #fork{grid-template-columns:repeat(6,1fr)!important}
 @media (max-width:780px){body.at-fork #fork{grid-template-columns:repeat(3,1fr)!important;row-gap:6px}#fork button{height:46px!important;font-size:10px!important}}
+/* laptop/desktop: six equal cells that can't grow past the panel; icon stacked over the label so MEMORY and NVLINK fit */
+@media (min-width:781px){
+  body.at-fork #fork{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:5px}
+  #fork button{min-width:0;flex-direction:column;gap:4px;height:50px!important;padding:0 2px!important;font-size:9.5px!important;letter-spacing:.03em!important;white-space:nowrap;overflow:hidden}
+  #fork button svg.fi{margin-right:0;vertical-align:0}
+}
+@media (min-width:781px) and (max-height:520px) and (orientation:landscape){#fork button{height:34px!important}}
 </style>
 </head><body>
 <input id="enter-toggle" type="checkbox" aria-hidden="true" tabindex="-1">
