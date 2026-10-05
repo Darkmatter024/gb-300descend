@@ -1030,6 +1030,16 @@ body.at-fork #fork{display:flex!important;flex-wrap:wrap;gap:4px 22px!important;
 body.hall-bd #labels .lab span:after{font:400 10px/1.3 'Geist Mono',var(--mono),monospace!important;letter-spacing:.05em!important;color:#d3d9df!important;text-transform:none!important}
 body .panel .panel-actions button.primary,body .panel .panel-actions button.primary *{text-transform:none!important;letter-spacing:0!important}
 #labels .lab.rs-hide{visibility:hidden!important}
+/* path tabs: each path lights up in its own colour, underline only, never a box */
+body{--rs-acc:#7fd3ff}
+body[data-path=compute]{--rs-acc:#7fd3ff}body[data-path=data]{--rs-acc:#ffe27a}body[data-path=heat]{--rs-acc:#ff8a5c}
+body[data-path=power]{--rs-acc:#f5c542}body[data-path=memory]{--rs-acc:#b18cff}body[data-path=nvlink]{--rs-acc:#8fd14f}
+#fork button[data-p=compute]{--pc:#7fd3ff}#fork button[data-p=data]{--pc:#ffe27a}#fork button[data-p=heat]{--pc:#ff8a5c}
+#fork button[data-p=power]{--pc:#f5c542}#fork button[data-p=memory]{--pc:#b18cff}#fork button[data-p=nvlink]{--pc:#8fd14f}
+body .panel #fork button,body .panel #fork button:first-of-type,body .panel #fork button:last-of-type,body .panel #fork button[aria-pressed]{border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;outline:none!important;box-shadow:none!important;background:none!important;-webkit-tap-highlight-color:transparent}
+body .panel #fork button:hover{color:var(--pc)!important}
+body .panel #fork button[aria-pressed=true]{color:var(--pc)!important;border-bottom-color:var(--pc)!important}
+body .panel #fork button:focus-visible{outline:none!important;border-bottom-color:var(--pc)!important;color:var(--pc)!important}
 /* phone */
 @media(max-width:780px){
   .fork-q{display:none!important}
