@@ -767,6 +767,8 @@ body.at-fork #fork{grid-template-columns:repeat(6,1fr)!important}
 /* main chapter panel: a touch more frost than the gauge so the paragraph stays easy to read */
 .panel{background:var(--lg-sheen),rgba(6,10,18,.22)!important;border:1px solid var(--lg-edge)!important;border-radius:16px!important;-webkit-backdrop-filter:blur(6px) saturate(1.5) brightness(.82)!important;backdrop-filter:blur(6px) saturate(1.5) brightness(.82)!important;box-shadow:var(--lg-rim),0 24px 60px rgba(0,0,0,.35)!important}
 .panel{text-shadow:var(--lg-halo)}
+/* gradient-filled text (the big 30 m readout etc.): a text-shadow paints over the gradient and turns it black, so use a drop-shadow behind it instead */
+#scale,.panel #scale,.panel [style*=background-clip],.panel .g{text-shadow:none!important;filter:drop-shadow(0 1px 2px rgba(0,0,0,.9)) drop-shadow(0 0 8px rgba(0,0,0,.6))}
 .panel .metrics span{background-color:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.16)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.14);border-radius:8px!important}
 #fork button{background:rgba(255,255,255,.05)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
 #fork button[aria-pressed=true]{background:var(--acc-f,rgba(127,211,255,.12))!important}
