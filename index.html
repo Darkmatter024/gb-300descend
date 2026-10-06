@@ -1038,6 +1038,10 @@ body:not(.render-ready) #plate,body.prologue #plate{opacity:0!important;visibili
 body.strike #streaks,body.strike #flash,#streaks{animation:none!important;opacity:0!important;visibility:hidden!important}
 body.strike #flash{display:none!important}
 body.strike #c{animation:none!important}
+/* hall tour runs in the live 3D: grade it so it isn't flat (contrast, colour, darker floor, vignette) */
+#c{transition:filter .7s ease}
+body.hall-tour #c{filter:contrast(1.42) saturate(1.7) brightness(.8)}
+body.hall-tour #rs-scrim{opacity:1!important;z-index:1!important;background:radial-gradient(130% 85% at 55% 40%,rgba(3,6,11,0) 40%,rgba(3,6,11,.7) 100%),linear-gradient(0deg,rgba(3,6,11,.55) 0%,rgba(3,6,11,0) 35%)!important}
 #prologue #frame{transition:opacity .9s ease}
 /* path tabs: each path lights up in its own colour, underline only, never a box */
 body{--rs-acc:#7fd3ff}
