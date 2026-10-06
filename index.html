@@ -182,6 +182,7 @@ body.show-key #rackKey{opacity:1}
 body.immersive #rackKey,body.presenter #rackKey,body.prologue #rackKey{opacity:0!important}
 @media (max-height:820px){#rackKey{gap:3px;padding:7px 9px}#rackKey em{display:none}}
 @media (max-width:900px){#rackKey{left:var(--gutter);right:var(--gutter);bottom:auto;max-width:none;height:auto;flex-direction:row;flex-wrap:wrap;justify-content:flex-start;align-items:center;column-gap:10px;row-gap:4px;top:calc(var(--gutter) + 56px + env(safe-area-inset-top,0px));font-size:8px;letter-spacing:.08em;padding:6px 8px}#rackKey b{flex-basis:100%;font-size:7.5px}#rackKey span{gap:5px}#rackKey i{width:8px;height:8px}#rackKey i.aisle{height:4px}#rackKey em{display:none}}
+@media (max-width:780px){#rackKey{right:auto;pointer-events:auto;padding:0;column-gap:10px;row-gap:5px}#rackKey b{flex-basis:auto;font-size:8.5px;color:var(--sub);padding:9px 11px;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;outline:none}#rackKey b:after{content:' +';color:var(--sig)}#rackKey span{display:none}#rackKey.open{right:var(--gutter);padding:0 10px 9px}#rackKey.open b{flex-basis:100%;padding:9px 1px 4px}#rackKey.open b:after{content:' \2212'}#rackKey.open span{display:flex}}
 body.touched .hint{opacity:0}
 
 /* ---- boot scene (static art while the engine starts) ---- */
@@ -1156,7 +1157,7 @@ body .panel #fork button:focus-visible{outline:none!important;border-bottom-colo
     </svg><div class="boot-note">01 / 14 · The grid · engine starting<br>For interactive 3D, open in Safari rather than the Files preview.</div></div>
   <div id="atmosphere"></div><div id="vignette"></div><div id="grain"></div><div id="iris" aria-hidden="true"></div>
   <div id="labels" aria-hidden="true"></div>
-  <div id="rackKey" aria-label="Floor colour key"><b>Floor key</b>
+  <div id="rackKey" aria-label="Floor colour key"><b role="button" tabindex="0" aria-expanded="false">Floor key</b>
     <span><i style="--c:#2fb8e6"></i>GB300 compute</span>
     <span><i style="--c:#f5c518"></i>Network</span>
     <span><i style="--c:#a77bff"></i>Storage</span>
@@ -1662,6 +1663,7 @@ function drawRackTop(c,w,h,id,sub,role,frontTop){
   if(sub){c.fillStyle=R.top;fitText(c,sub,w*.86,Math.round(f*.42),600);c.fillText(sub,w/2,cy+f*.62);}
 }
 
+(function(){const hook=()=>{const k=document.getElementById('rackKey');if(!k)return;const b=k.querySelector('b');const t=()=>{const o=k.classList.toggle('open');b.setAttribute('aria-expanded',String(o));};b.addEventListener('click',t);b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();t();}});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook);else hook();})();
 function building(){
   const g=new THREE.Group();                                   // 1 unit = 5 m
   box(g,40,0.1,24,M('#1a2027',{roughness:.9}),0,-0.05,0);
@@ -3053,7 +3055,7 @@ INFO.forEach((inf,i)=>{
 let cur=0,target=0,tr=null,autoplay=false,labelsOn=true,lastRest=0,shown=-1;
 function setPanel(n){
   if(n===shown)return;shown=n;const inf=INFO[n];enhancePanel(n);
-  document.body.classList.toggle('show-key',n===2);
+  document.body.classList.toggle('show-key',n===2);if(n!==2){const k=document.getElementById('rackKey');if(k){k.classList.remove('open');k.firstElementChild.setAttribute('aria-expanded','false');}}
   $('#idx').textContent=String(n+1).padStart(2,'0');
   $('#scale').textContent='≈ '+inf.sc+' across';
   $('#title').textContent=inf.title;$('#desc').textContent=inf.text;
