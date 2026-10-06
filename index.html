@@ -1218,6 +1218,8 @@ body .panel #fork button:focus-visible{outline:none!important;border-bottom-colo
 
 </div>
 <script id="entry-bootstrap">
+/* American narrator by default; reset an older saved British choice once */
+try{if(!localStorage.getItem('gb-voice-us')){localStorage.setItem('gb-voice','heart');localStorage.setItem('gb-voice-us','1');}}catch(_){}
 /* Bootstrap the entrance before any 3D engine is parsed or started.
    Native label/checkbox CSS above also works if this script does not run. */
 (function(){
@@ -3452,7 +3454,7 @@ try{(function(){
  const curCam=()=>({pos:shotRef?shotRef.pos.slice():shot.pos.slice(),tgt:shotRef?shotRef.tgt.slice():shot.tgt.slice()});
  const moveTo=(c,dur)=>{TT.from=curCam();TT.to=c;TT.t0=performance.now();TT.dur=dur;};
  const setP=p=>{try{if(p&&window.__GBpathName!==p&&window.__GBsetPath)window.__GBsetPath(p);}catch(_){}};
- const voice=()=>{let v='emma';try{const x=localStorage.getItem('gb-voice');if(x==='heart'||x==='emma')v=x;}catch(_){}return v;};
+ const voice=()=>{let v='heart';try{const x=localStorage.getItem('gb-voice');if(x==='heart'||x==='emma')v=x;}catch(_){}return v;};
  const speak=(i,done)=>{const my=++TT.seq;let fired=false;const fin=()=>{if(fired||my!==TT.seq)return;fired=true;done();};
    const c=TAUD&&TAUD[voice()]&&TAUD[voice()]['T:'+i];const words=TL[i].say.split(/\s+/).length;
    const safety=setTimeout(fin,words*520+4000);
@@ -4184,7 +4186,7 @@ requestAnimationFrame(frame);window.__GBframe=frame;
   let sayId=0;
   const AU=new Audio();AU.preload='auto';
   const VNAME={emma:'Emma \u00b7 British',heart:'Heart \u00b7 American'};
-  let vname='emma';try{const v=localStorage.getItem('gb-voice');if(VNAME[v])vname=v;}catch(e){}
+  let vname='heart';try{const v=localStorage.getItem('gb-voice');if(VNAME[v])vname=v;}catch(e){}
   // narration audio: inline (offline file) as inert JSON, or narration.json next to the published page; loaded after first paint
   let AUD=null,audLoading=false;
   function loadAud(){if(AUD||audLoading)return;audLoading=true;
