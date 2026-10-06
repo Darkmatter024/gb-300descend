@@ -1030,6 +1030,16 @@ body.at-fork #fork{display:flex!important;flex-wrap:wrap;gap:4px 22px!important;
 body.hall-bd #labels .lab span:after{font:400 10px/1.3 'Geist Mono',var(--mono),monospace!important;letter-spacing:.05em!important;color:#d3d9df!important;text-transform:none!important}
 body .panel .panel-actions button.primary,body .panel .panel-actions button.primary *{text-transform:none!important;letter-spacing:0!important}
 #labels .lab.rs-hide{visibility:hidden!important}
+/* phone, every chapter: same clean layout as the hall */
+@media(max-width:780px){
+ body #plate{display:none!important}
+ body .panel .rs-stats,body #rs-more{display:none!important}
+ body .panel .card-inner{gap:8px!important}
+ body .stage-overline{font-size:10px!important}
+ body #cardtog{display:none!important}
+ body #title{font-size:40px!important}
+ body:not(.hall-bd) #rs-scrim{background:linear-gradient(0deg,rgba(4,7,11,.97) 0%,rgba(4,7,11,.9) 34%,rgba(4,7,11,.35) 50%,rgba(4,7,11,0) 60%),linear-gradient(180deg,rgba(4,7,11,.55) 0%,rgba(4,7,11,0) 12%)!important}
+}
 /* phone hall screen: photo lifted so the aisle sits above the text, no clutter */
 @media(max-width:780px){
  body.hall-bd #plate{display:none!important}
