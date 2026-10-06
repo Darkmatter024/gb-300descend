@@ -172,6 +172,16 @@ body.ascending #iris{animation:iris-up 1.4s var(--ease) both}
 /* ---- hint (bottom-right) ---- */
 .hint{position:absolute;z-index:6;right:var(--gutter);top:calc(var(--gutter) + 50px + env(safe-area-inset-top,0px));margin:0 34px 0 0;font:500 9px/1.8 var(--mono);letter-spacing:.16em;color:var(--mute);text-transform:uppercase;text-align:right;pointer-events:none;transition:opacity .6s}
 .hint b{font-weight:500;color:var(--sub)}
+#rackKey{position:absolute;z-index:6;right:var(--gutter);bottom:calc(var(--gutter) + 8px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:5px;max-width:200px;padding:10px 12px;background:var(--glass);border:1px solid var(--line);border-radius:4px;font:500 9px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--sub);pointer-events:none;opacity:0;transition:opacity .5s}
+#rackKey b{font-weight:500;color:var(--mute)}
+#rackKey span{display:flex;align-items:center;gap:8px}
+#rackKey i{width:12px;height:12px;border-radius:2px;background:var(--c);flex:none}
+#rackKey i.aisle{height:5px;opacity:.85}
+#rackKey em{font-style:normal;color:var(--mute);letter-spacing:.06em;text-transform:none;font-size:9.5px;margin-top:2px}
+body.show-key #rackKey{opacity:1}
+body.immersive #rackKey,body.presenter #rackKey,body.prologue #rackKey{opacity:0!important}
+@media (max-height:820px){#rackKey{gap:3px;padding:7px 9px}#rackKey em{display:none}}
+@media (max-width:900px){#rackKey{right:var(--gutter);max-width:none;flex-direction:row;flex-wrap:wrap;column-gap:10px;row-gap:3px;top:calc(var(--gutter) + 64px + env(safe-area-inset-top,0px));font-size:8px;padding:7px 9px}#rackKey em{display:none}}
 body.touched .hint{opacity:0}
 
 /* ---- boot scene (static art while the engine starts) ---- */
@@ -1146,6 +1156,15 @@ body .panel #fork button:focus-visible{outline:none!important;border-bottom-colo
     </svg><div class="boot-note">01 / 14 · The grid · engine starting<br>For interactive 3D, open in Safari rather than the Files preview.</div></div>
   <div id="atmosphere"></div><div id="vignette"></div><div id="grain"></div><div id="iris" aria-hidden="true"></div>
   <div id="labels" aria-hidden="true"></div>
+  <div id="rackKey" aria-label="Floor colour key"><b>Floor key</b>
+    <span><i style="--c:#2fb8e6"></i>GB300 compute</span>
+    <span><i style="--c:#f5c518"></i>Network</span>
+    <span><i style="--c:#a77bff"></i>Storage</span>
+    <span><i style="--c:#2ee6b6"></i>CDU · coolant</span>
+    <span><i style="--c:#ff8a3d"></i>RPP · power</span>
+    <span><i class="aisle" style="--c:#2f7dff"></i>Cold aisle</span>
+    <span><i class="aisle" style="--c:#ff5a3c"></i>Hot aisle · contained</span>
+    <em>Rack tops read row + position, e.g. B07</em></div>
   <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span><span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
 
   <header class="masthead">
@@ -1603,6 +1622,46 @@ function campus(){
     labels:[{p:pt(0,1.4,0),t:'Data center · 4 halls'},{p:pt(4.2,0.5,-5.2),t:'Generator yard · diesel, N+1'},{p:pt(-6.2,0.7,-5.6),t:'Site substation · MV switchgear'},{p:pt(4.8,0.5,-0.1),t:'Cooling plant · dry coolers'},{p:pt(9,0.3,7.2),t:'Fiber entrance · diverse paths'}]};
 }
 
+/* ---------- floor marking: every rack carries its ID on top, colour-coded by role ----------
+   Role colours follow common floor practice: network yellow (fibre), power orange (RPP),
+   coolant teal, storage violet, compute in the house cyan. Cold aisles blue, hot aisles red. */
+const RACK_ROLE={
+  compute:{name:'GB300 NVL72 · compute',top:'#2fb8e6',body:'#3a4656',led:'#4cc3ff'},
+  network:{name:'Network · leaf / spine',top:'#f5c518',body:'#57502a',led:'#f5c518'},
+  storage:{name:'Storage',top:'#a77bff',body:'#4a3d66',led:'#b892ff'},
+  cdu:{name:'CDU · in-row coolant',top:'#2ee6b6',body:'#24504c',led:'#2ee6b6'},
+  power:{name:'RPP · row power',top:'#ff8a3d',body:'#5c4128',led:'#ff8a3d'}
+};
+function rackRoleAt(row,pos){            // row 0..7 (A..H), pos 1..22
+  if(pos===1||pos===22)return 'power';
+  if(pos===2||pos===21)return 'network';
+  if(pos===11||pos===12)return 'cdu';
+  if(row===7&&pos>=3&&pos<=8)return 'storage';
+  return 'compute';
+}
+const pad2=n=>String(n).padStart(2,'0');
+/* a flat plate lying on top of a box, carrying a printed label (texture top = world -z) */
+function topPlate(g,w,d,x,y,z,draw,px){
+  const W=px||256,H=Math.max(32,Math.round(W*d/w));
+  const t=tex(W,H,draw);t.anisotropy=8;
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));
+  m.rotation.x=-Math.PI/2;m.position.set(x,y,z);g.add(m);return m;
+}
+function fitText(c,str,maxW,size,weight){let f=size;c.font=`${weight||700} ${f}px 'IBM Plex Mono',ui-monospace,monospace`;while(f>8&&c.measureText(str).width>maxW){f-=1;c.font=`${weight||700} ${f}px 'IBM Plex Mono',ui-monospace,monospace`;}return f;}
+/* one rack-top label: dark lid, role-coloured front band, ID centred */
+function drawRackTop(c,w,h,id,sub,role,frontTop){
+  const R=RACK_ROLE[role];
+  c.fillStyle='#0b1118';c.fillRect(0,0,w,h);
+  c.globalAlpha=.22;c.fillStyle=R.top;c.fillRect(0,0,w,h);c.globalAlpha=1;
+  const band=Math.round(h*.16);c.fillStyle=R.top;c.fillRect(0,frontTop?0:h-band,w,band);
+  c.strokeStyle=R.top;c.lineWidth=Math.max(2,w*.03);c.strokeRect(1,1,w-2,h-2);
+  c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f2f8ff';
+  const cy=frontTop?h*.58:h*.42;
+  const f=fitText(c,id,w*.86,Math.round(w*.34));
+  c.fillText(id,w/2,sub?cy-f*.18:cy);
+  if(sub){c.fillStyle=R.top;fitText(c,sub,w*.86,Math.round(f*.42),600);c.fillText(sub,w/2,cy+f*.62);}
+}
+
 function building(){
   const g=new THREE.Group();                                   // 1 unit = 5 m
   box(g,40,0.1,24,M('#1a2027',{roughness:.9}),0,-0.05,0);
@@ -1610,20 +1669,46 @@ function building(){
   box(g,40,2.4,0.06,wall,0,1.2,-12);box(g,40,2.4,0.06,wall,0,1.2,12);box(g,0.06,2.4,24,wall,-20,1.2,0);box(g,0.06,2.4,24,wall,20,1.2,0);
   edges(g,40,2.4,24,0,1.2,0,'#5c6a78',.6);
   // four data halls, rows of racks inside
-  const rackM=M('#3a4656',{metalness:.45,roughness:.5}), rows=[], lit=[], aisles=[];
+  const rackM=M('#ffffff',{metalness:.45,roughness:.5}), rows=[], lit=[], aisles=[], cold=[], roles=[], halls=[];
   [[-5.2,-3.4],[5.2,-3.4],[-5.2,3.4],[5.2,3.4]].forEach(([hx,hz],k)=>{
     box(g,6.4,0.02,4.4,M(k===1?'#1e2a36':'#171d24'),hx,0.01,hz);
     box(g,6.4,1.6,0.04,part,hx,0.8,hz-2.2);box(g,6.4,1.6,0.04,part,hx,0.8,hz+2.2);box(g,0.04,1.6,4.4,part,hx-3.2,0.8,hz);box(g,0.04,1.6,4.4,part,hx+3.2,0.8,hz);
-    // 4 hot-aisle pods: two rows back to back, 22 racks per row
-    [-1.5,-0.5,0.5,1.5].forEach(pz=>{
-      [-1,1].forEach(f=>{const rz=hz+pz+f*0.2;
-        for(let i=0;i<22;i++){const x=hx-2.6+i*0.248;rows.push([x,0.26,rz,0.22,0.52,0.26]);lit.push([x,0.3,rz+f*0.135,0.2,0.36,0.01]);}});
+    // 4 hot-aisle pods: two rows back to back, 22 racks per row; rows A..H south to north
+    const hr=[];
+    [-1.5,-0.5,0.5,1.5].forEach((pz,pi)=>{
+      [-1,1].forEach((f,fi)=>{const rz=hz+pz+f*0.2, ri=pi*2+fi, row={L:'ABCDEFGH'[ri],z:rz,f,racks:[]};
+        for(let i=0;i<22;i++){const x=hx-2.6+i*0.248, role=rackRoleAt(ri,i+1);
+          rows.push([x,0.26,rz,0.22,0.52,0.26]);lit.push([x,0.3,rz+f*0.135,0.2,0.36,0.01]);roles.push(role);row.racks.push({x,pos:i+1,role});}
+        hr.push(row);});
       aisles.push([hx,0.53,hz+pz,5.5,0.02,0.14]);
     });
+    // cold aisles: the fronts of the rows, between pods and along the hall walls
+    [-2.015,-1,0,1,2.015].forEach((dz,j)=>cold.push([hx,0.024,hz+dz,5.9,0.004,(j===0||j===4)?0.33:0.3]));
+    halls.push({hx,hz,k,rows:hr});
   });
-  inst(g,rows,rackM);
-  inst(g,lit,M('#1a2a33',{emissive:new THREE.Color('#4cc3ff'),emissiveIntensity:.35}));
-  inst(g,aisles,M('#9cc3e6',{opacity:.25,roughness:.1}));
+  const rackIM=inst(g,rows,rackM);roles.forEach((r,k)=>rackIM.setColorAt(k,new THREE.Color(RACK_ROLE[r].body)));
+  const litIM=inst(g,lit,new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.85}));roles.forEach((r,k)=>litIM.setColorAt(k,new THREE.Color(RACK_ROLE[r].led)));
+  inst(g,aisles,M('#ff5a3c',{opacity:.38,roughness:.3,emissive:new THREE.Color('#ff5a3c'),emissiveIntensity:.45}));   // hot aisle containment roofs
+  inst(g,cold,new THREE.MeshBasicMaterial({color:'#2f7dff',transparent:true,opacity:.30,depthWrite:false}));        // cold aisle floor
+  // rack-top IDs, row signs and the hall code, printed on one plate per hall
+  const small=Math.min(window.innerWidth||1400,window.innerHeight||900)<700;
+  halls.forEach(h=>{
+    const W=small?1536:2048, H=Math.round(W*4.4/6.4);
+    topPlate(g,6.4,4.4,h.hx,0.524,h.hz,(c,w,hh)=>{
+      const sx=w/6.4, sz=hh/4.4, X=x=>(x-(h.hx-3.2))*sx, Z=z=>(z-(h.hz-2.2))*sz;
+      const rw=0.22*sx, rd=0.26*sz;
+      h.rows.forEach(r=>{
+        r.racks.forEach(rk=>{c.save();c.translate(X(rk.x)-rw/2+1,Z(r.z)-rd/2+1);drawRackTop(c,rw-2,rd-2,r.L+pad2(rk.pos),null,rk.role,r.f<0);c.restore();});
+        // row signs at both ends
+        [h.hx-2.95,h.hx+2.95].forEach(ex=>{const cx=X(ex),cy=Z(r.z),bw=0.4*sx,bh=rd*.62;
+          c.fillStyle='rgba(8,14,22,.92)';c.fillRect(cx-bw/2,cy-bh/2,bw,bh);c.strokeStyle='#7fd3ff';c.lineWidth=2;c.strokeRect(cx-bw/2,cy-bh/2,bw,bh);
+          c.fillStyle='#eef3f8';c.textAlign='center';c.textBaseline='middle';fitText(c,'ROW '+r.L,bw*.86,Math.round(bh*.5));c.fillText('ROW '+r.L,cx,cy);});
+      });
+      c.textAlign='left';c.textBaseline='middle';c.fillStyle='rgba(206,230,255,.9)';
+      fitText(c,'DH'+(h.k+1)+' · DATA HALL '+(h.k+1),w*.5,Math.round(0.2*sz),700);
+      c.fillText('DH'+(h.k+1)+' · DATA HALL '+(h.k+1),X(h.hx-2.95),Z(h.hz-2.03));
+    },W);
+  });
   // electrical rooms along the south wall
   const cab=M('#3a4148',{metalness:.4}), ats=M('#2f3a46',{metalness:.5}), amber=E('#f5a623',.35), batt=M('#2a3038');
   for(let i=0;i<4;i++){const x=-15+i*10;box(g,8,0.02,3,M('#1c222a'),x,0.01,-10.2);box(g,8,1.4,0.04,part,x,0.7,-8.7);
@@ -1655,14 +1740,18 @@ function hall(){
   const glass=M('#9cc3e6',{opacity:.2,roughness:.1});
   const busA=M('#2c333a',{emissive:new THREE.Color('#f5a623'),emissiveIntensity:.35}), busB=M('#2c333a',{emissive:new THREE.Color('#4cc3ff'),emissiveIntensity:.35}), rppM=M('#39424d',{metalness:.5});
   const plane=new THREE.PlaneGeometry(0.5,2.2);
-  [[-4.8,-1],[-2.4,1],[2.4,-1],[4.8,1]].forEach(([z,f])=>{
-    for(let i=0;i<12;i++){const x=-3.3+i*0.6;box(g,0.58,2.3,1.2,body,x,1.15,z);const p=new THREE.Mesh(plane,front);p.position.set(x,1.15,z+f*0.605);if(f<0)p.rotation.y=Math.PI;g.add(p);}
-    [-4,4].forEach(x=>{box(g,0.8,2.1,1.2,cdu,x,1.05,z);box(g,0.06,1.5,0.02,blue,x-0.2,1.2,z+f*0.61);});
+  [[-4.8,-1],[-2.4,1],[2.4,-1],[4.8,1]].forEach(([z,f],ri)=>{
+    const L='ABCD'[ri];
+    for(let i=0;i<12;i++){const x=-3.3+i*0.6;topPlate(g,0.54,1.14,x,2.306,z,(c,w,h)=>drawRackTop(c,w,h,L+pad2(i+1),'DH2 · GB300',  'compute',f<0),128);
+      box(g,0.58,2.3,1.2,body,x,1.15,z);const p=new THREE.Mesh(plane,front);p.position.set(x,1.15,z+f*0.605);if(f<0)p.rotation.y=Math.PI;g.add(p);}
+    [-4,4].forEach((x,j)=>{box(g,0.8,2.1,1.2,cdu,x,1.05,z);box(g,0.06,1.5,0.02,blue,x-0.2,1.2,z+f*0.61);
+      topPlate(g,0.76,1.14,x,2.106,z,(c,w,h)=>drawRackTop(c,w,h,'CDU-'+L+(j+1),'COOLANT','cdu',f<0),160);});
     box(g,7.2,0.12,0.12,steel,0,2.62,z+f*0.35);
     box(g,8.8,0.07,0.2,yellow,0,2.98,z+f*0.2);
     cyl(g,0.05,7.6,blue,0,2.45,z-f*0.3,'x');cyl(g,0.05,7.6,red,0,2.45,z-f*0.45,'x');
     box(g,7.2,0.1,0.14,busA,0,2.78,z+f*0.05);box(g,7.2,0.1,0.14,busB,0,2.78,z-f*0.05);                    // A / B busway
-    [-5,5].forEach(x=>{box(g,0.6,2.0,0.9,rppM,x,1.0,z);box(g,0.5,0.9,0.02,M('#0d1218'),x,1.2,z+f*0.46);});    // RPPs
+    [-5,5].forEach((x,j)=>{box(g,0.6,2.0,0.9,rppM,x,1.0,z);box(g,0.5,0.9,0.02,M('#0d1218'),x,1.2,z+f*0.46);    // RPPs
+      topPlate(g,0.56,0.86,x,2.006,z,(c,w,h)=>drawRackTop(c,w,h,'RPP-'+L+(j+1),'POWER','power',f<0),128);});
   });
   [-3.6,3.6].forEach(zc=>{box(g,7.2,0.03,1.2,glass,0,2.32,zc);box(g,0.03,2.3,1.2,glass,-3.62,1.15,zc);box(g,0.03,2.3,1.2,glass,3.62,1.15,zc);});
   box(g,0.2,0.07,11,yellow,-4.7,2.98,0);
@@ -1676,6 +1765,7 @@ function rack(){
   const frame=M('#1b2129',{metalness:.7,roughness:.35}), side=M('#20262d',{metalness:.5}), top=M('#252c34',{metalness:.5});
   [-1.12,1.12].forEach(sx=>[-2.34,2.34].forEach(sz=>box(g,0.1,9.2,0.1,frame,sx,0,sz)));
   box(g,2.4,0.1,4.8,frame,0,4.55,0);box(g,2.4,0.1,4.8,frame,0,-4.55,0);
+  topPlate(g,2.2,4.4,0,4.612,0,(c,w,h)=>drawRackTop(c,w,h,'DH2-B07','GB300 NVL72','compute',false),256);
   const sideGlass=M('#2a3542',{opacity:.22,metalness:.3});
   box(g,0.02,9,4.6,sideGlass,-1.18,0,0);box(g,0.02,9,4.6,sideGlass,1.18,0,0);
   const fm=k=>M('#ffffff',{map:T[k],emissive:new THREE.Color('#ffffff'),emissiveMap:T[k],emissiveIntensity:.3});
@@ -2963,6 +3053,7 @@ INFO.forEach((inf,i)=>{
 let cur=0,target=0,tr=null,autoplay=false,labelsOn=true,lastRest=0,shown=-1;
 function setPanel(n){
   if(n===shown)return;shown=n;const inf=INFO[n];enhancePanel(n);
+  document.body.classList.toggle('show-key',n===2);
   $('#idx').textContent=String(n+1).padStart(2,'0');
   $('#scale').textContent='≈ '+inf.sc+' across';
   $('#title').textContent=inf.title;$('#desc').textContent=inf.text;
