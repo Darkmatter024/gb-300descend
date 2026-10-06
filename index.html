@@ -1160,7 +1160,7 @@ body .panel #fork button:focus-visible{outline:none!important;border-bottom-colo
   <div id="rackKey" aria-label="Floor colour key"><b role="button" tabindex="0" aria-expanded="false">Floor key</b>
     <span><i style="--c:#2fb8e6"></i>GB300 compute</span>
     <span><i style="--c:#f5c518"></i>Network</span>
-    <span><i style="--c:#a77bff"></i>Storage</span>
+    <span><i style="--c:#ff5fa2"></i>Storage</span>
     <span><i style="--c:#2ee6b6"></i>CDU · coolant</span>
     <span><i style="--c:#ff8a3d"></i>RPP · power</span>
     <span><i class="aisle" style="--c:#2f7dff"></i>Cold aisle</span>
@@ -1627,9 +1627,9 @@ function campus(){
    Role colours follow common floor practice: network yellow (fibre), power orange (RPP),
    coolant teal, storage violet, compute in the house cyan. Cold aisles blue, hot aisles red. */
 const RACK_ROLE={
-  compute:{name:'GB300 NVL72 · compute',top:'#2fb8e6',body:'#3a4656',led:'#4cc3ff'},
+  compute:{name:'GB300 NVL72 · compute',top:'#2fb8e6',body:'#33334f',led:'#9b5cff'},
   network:{name:'Network · leaf / spine',top:'#f5c518',body:'#57502a',led:'#f5c518'},
-  storage:{name:'Storage',top:'#a77bff',body:'#4a3d66',led:'#b892ff'},
+  storage:{name:'Storage',top:'#ff5fa2',body:'#5a2f45',led:'#ff5fa2'},
   cdu:{name:'CDU · in-row coolant',top:'#2ee6b6',body:'#24504c',led:'#2ee6b6'},
   power:{name:'RPP · row power',top:'#ff8a3d',body:'#5c4128',led:'#ff8a3d'}
 };
@@ -1664,6 +1664,49 @@ function drawRackTop(c,w,h,id,sub,role,frontTop){
 }
 
 (function(){const hook=()=>{const k=document.getElementById('rackKey');if(!k)return;const b=k.querySelector('b');const t=()=>{const o=k.classList.toggle('open');b.setAttribute('aria-expanded',String(o));};b.addEventListener('click',t);b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();t();}});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook);else hook();})();
+/* ---------- GB300 look: glass cabinet, violet edge glow, blue/violet coolant loops, purple tray LEDs ----------
+   One drawing used everywhere a rack front is textured. em=true draws only the glowing parts (for emissive maps). */
+const GBV='#7b2fff', GBB='#2d63ff', GBP='#a24dff';
+function drawGBFront(c,w,h,em){
+  const X=f=>f*w, Y=f=>f*h, lw=Math.max(1.5,w*.022);
+  c.fillStyle=em?'#000':'#07080f';c.fillRect(0,0,w,h);
+  const glow=(col,b)=>{c.shadowColor=col;c.shadowBlur=b;};
+  const tray=(x,y,tw,th,leds,col)=>{
+    if(!em){c.fillStyle='#10121c';c.fillRect(x,y,tw,th);c.fillStyle='rgba(255,255,255,.06)';c.fillRect(x,y,tw,1);
+      c.fillStyle='#05060b';for(let v=0;v<6;v++)c.fillRect(x+tw*.32+v*tw*.07,y+th*.25,tw*.04,th*.5);}
+    glow(col,6);c.fillStyle=col;
+    leds.forEach(([fx,fy])=>c.fillRect(x+fx*tw-1.5,y+fy*th-1.5,3,3));
+    c.shadowBlur=0;
+  };
+  // top blades
+  for(let i=0;i<8;i++){const x=X(.12+i*.098),y=Y(.035),bw=X(.075),bh=Y(.1);
+    if(!em){c.fillStyle='#12141f';c.fillRect(x,y,bw,bh);c.fillStyle='#05060b';c.fillRect(x+bw*.3,y+bh*.1,bw*.4,bh*.8);}
+    glow(GBP,6);c.fillStyle=GBP;c.fillRect(x+bw*.42,y+bh*.35,2.5,2.5);c.fillRect(x+bw*.42,y+bh*.55,2.5,2.5);c.shadowBlur=0;}
+  // compute trays: two columns, 2x2 purple clusters
+  for(let r=0;r<6;r++)[0,1].forEach(k=>{const tw=X(.34),th=Y(.036),x=X(k?.53:.13),y=Y(.17+r*.043);
+    tray(x,y,tw,th,[[.12,.35],[.18,.35],[.12,.65],[.18,.65],[.9,.5]],GBP);});
+  // switch / lower trays: full width rows, blue and violet LEDs
+  for(let r=0;r<12;r++){const tw=X(.74),th=Y(.022),x=X(.13),y=Y(.56+r*.026);
+    tray(x,y,tw,th,[[.1,.5],[.3,.5],[.42,.5],[.6,.5],[.8,.5],[.9,.5]],r%2?GBB:GBP);}
+  // central manifold block
+  if(!em){c.fillStyle='#8e98a8';c.fillRect(X(.4),Y(.47),X(.2),Y(.035));c.fillStyle='#c9d1dc';c.fillRect(X(.4),Y(.47),X(.2),1.5);}
+  // coolant loops: outer supply blue, inner return violet, with branches into the manifold
+  const pipe=(col,pts,wd)=>{glow(col,em?14:10);c.strokeStyle=col;c.lineWidth=wd;c.lineCap='round';c.lineJoin='round';c.beginPath();
+    c.moveTo(X(pts[0][0]),Y(pts[0][1]));for(let i=1;i<pts.length;i++)c.lineTo(X(pts[i][0]),Y(pts[i][1]));c.stroke();c.shadowBlur=0;};
+  [[-1,GBB,.07],[-1,GBV,.1],[1,GBV,.9],[1,GBB,.93]].forEach(([side,col,fx],j)=>{
+    const inner=side<0?fx+.22:fx-.22, mid=side<0?.42:.58;
+    pipe(col,[[side<0?.2:.8,.15],[fx,.15],[fx,.44],[mid-side*.02*(j%2),.44+.01*(j%2)],[mid,.485]],lw*1.6);
+    pipe(col,[[mid,.505],[mid-side*.0,.53],[inner,.53],[fx,.55],[fx,.9]],lw*1.6);
+  });
+  // bottom risers
+  for(let i=0;i<10;i++){const x=.16+i*.075;pipe(i%3?GBB:GBV,[[x,.88],[x,.97]],lw*1.1);}
+  // glass frame with violet edge glow
+  glow(GBV,em?18:12);c.strokeStyle=GBV;c.lineWidth=lw*1.4;c.strokeRect(lw,lw,w-2*lw,h-2*lw);c.shadowBlur=0;
+  if(!em){c.fillStyle='rgba(160,140,255,.035)';c.fillRect(0,0,w,h);}
+}
+let _gbFrontTex=null;
+function gbFrontTex(){if(!_gbFrontTex){_gbFrontTex=tex(96,300,(c,w,h)=>drawGBFront(c,w,h,false));}return _gbFrontTex;}
+
 function building(){
   const g=new THREE.Group();                                   // 1 unit = 5 m
   box(g,40,0.1,24,M('#1a2027',{roughness:.9}),0,-0.05,0);
@@ -1680,7 +1723,7 @@ function building(){
     [-1.5,-0.5,0.5,1.5].forEach((pz,pi)=>{
       [-1,1].forEach((f,fi)=>{const rz=hz+pz+f*0.2, ri=pi*2+fi, row={L:'ABCDEFGH'[ri],z:rz,f,racks:[]};
         for(let i=0;i<22;i++){const x=hx-2.6+i*0.248, role=rackRoleAt(ri,i+1);
-          rows.push([x,0.26,rz,0.22,0.52,0.26]);lit.push([x,0.3,rz+f*0.135,0.2,0.36,0.01]);roles.push(role);row.racks.push({x,pos:i+1,role});}
+          rows.push([x,0.26,rz,0.22,0.52,0.26]);lit.push([x,0.262,rz+f*0.1325,0.21,0.5,0.004]);roles.push(role);row.racks.push({x,pos:i+1,role});}
         hr.push(row);});
       aisles.push([hx,0.53,hz+pz,5.5,0.02,0.14]);
     });
@@ -1689,7 +1732,7 @@ function building(){
     halls.push({hx,hz,k,rows:hr});
   });
   const rackIM=inst(g,rows,rackM);roles.forEach((r,k)=>rackIM.setColorAt(k,new THREE.Color(RACK_ROLE[r].body)));
-  const litIM=inst(g,lit,new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.85}));roles.forEach((r,k)=>litIM.setColorAt(k,new THREE.Color(RACK_ROLE[r].led)));
+  const litIM=inst(g,lit,new THREE.MeshBasicMaterial({color:'#ffffff',map:gbFrontTex(),transparent:true,opacity:.95}));roles.forEach((r,k)=>litIM.setColorAt(k,new THREE.Color(r==='compute'?'#ffffff':RACK_ROLE[r].led)));
   inst(g,aisles,M('#ff5a3c',{opacity:.38,roughness:.3,emissive:new THREE.Color('#ff5a3c'),emissiveIntensity:.45}));   // hot aisle containment roofs
   inst(g,cold,new THREE.MeshBasicMaterial({color:'#2f7dff',transparent:true,opacity:.30,depthWrite:false}));        // cold aisle floor
   // rack-top IDs, row signs and the hall code, printed on one plate per hall
@@ -2103,6 +2146,40 @@ function cinematicDetail(scenes){
   // Rack-top optical cable strain relief.
   for(let i=0;i<9;i++){let x=-.78+i*.19;tube(g,[[x,4.55,-1.75],[x,4.7,-1.75],[x+.06,4.77,-2.05]],.013,rubber);}
   const light=new THREE.PointLight(0xbfe4ff,1.1,12);light.position.set(4,5,5);g.add(light);
+  // ---- GB300 look ----
+  const glowM=(col,op,add)=>new THREE.MeshBasicMaterial({color:new THREE.Color(col),transparent:true,opacity:op==null?1:op,depthWrite:false,toneMapped:false,blending:add?THREE.AdditiveBlending:THREE.NormalBlending});
+  const vEdge=glowM(GBV,1), vHalo=glowM(GBV,.14,true);
+  const EX=1.17,EZ=2.39,EY=4.62;
+  const edge=(w,h,d,x,y,z)=>{w=w<.1?.05:w;h=h<.1?.05:h;d=d<.1?.05:d;box(g,w,h,d,vEdge,x,y,z);box(g,w+(w<.1?.12:0),h+(h<.1?.12:0),d+(d<.1?.12:0),vHalo,x,y,z);};
+  [-EX,EX].forEach(x=>[-EZ,EZ].forEach(z=>edge(.035,EY*2,.035,x,0,z)));
+  [-EY,EY].forEach(y=>{[-EZ,EZ].forEach(z=>edge(EX*2,.035,.035,0,y,z));[-EX,EX].forEach(x=>edge(.035,.035,EZ*2,x,y,0));});
+  const pipe=(pts,r,col)=>{const cv=new THREE.CatmullRomCurve3(pts.map(v3));const n=Math.max(24,pts.length*14);
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(cv,n,r,8,false),glowM(col,1)));
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(cv,n,r*2.4,8,false),glowM(col,.1,true)));};
+  const ZF=2.25, Ut=.178, ty=i=>3.0-Ut*(i+.5);
+  // outer supply (blue) and inner return (violet) on both sides, meeting at a centre manifold over the switch trays
+  [[-1,GBB,.99],[-1,GBV,.88],[1,GBV,.88],[1,GBB,.99]].forEach(([sd,col,ax])=>{
+    const x=sd*ax;
+    pipe([[sd*.35,3.32,ZF],[x,3.25,ZF],[x,2.4,ZF],[x,.9,ZF],[sd*(ax-.1),.2,ZF],[sd*.32,-.05,ZF],[sd*.16,-.12,ZF]],.045,col);
+    pipe([[sd*.16,-.42,ZF],[sd*.32,-.5,ZF],[sd*(ax-.1),-.75,ZF],[x,-1.4,ZF],[x,-3.0,ZF],[x,-3.6,ZF]],.045,col);
+  });
+  const steel=M('#aeb8c6',{metalness:.9,roughness:.2});
+  box(g,.36,.36,.14,steel,0,-.27,ZF);[-.1,.1].forEach(x=>cyl(g,.03,.5,steel,x,-.27,ZF+.04));
+  // branch stubs into every compute tray
+  [4,5,6,7,8,9,10,11,12,13,23,24,25,26,27,28,29,30].forEach((i,k)=>[-1,1].forEach(sd=>
+    pipe([[sd*.88,ty(i),ZF],[sd*.8,ty(i),ZF-.02],[sd*.7,ty(i),ZF-.1]],.014,k%2?GBV:GBB)));
+  // bottom risers
+  for(let i=0;i<10;i++){const x=-.8+i*.178;pipe([[x,-3.3,ZF],[x,-4.45,ZF]],.016,i%3?GBB:GBV);}
+  // purple tray LEDs: 2x2 clusters on compute trays, a blue/violet row on switch trays
+  const ledsP=[],ledsB=[];
+  [4,5,6,7,8,9,10,11,12,13,23,24,25,26,27,28,29,30].forEach(i=>[-.5,.36].forEach(x=>[[0,.03],[.05,.03],[0,-.03],[.05,-.03]].forEach(([dx,dy])=>ledsP.push([x+dx,ty(i)+dy,2.16,.03,.03,.01]))));
+  for(let i=14;i<23;i++)for(let k=0;k<6;k++)(k%2?ledsB:ledsP).push([-.55+k*.22,ty(i),2.16,.035,.022,.01]);
+  inst(g,ledsP,glowM(GBP,1));inst(g,ledsB,glowM(GBB,1));
+  // violet light pooling on the floor
+  const pool=tex(256,256,(c,w,h)=>{const gr=c.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);gr.addColorStop(0,'rgba(150,90,255,.55)');gr.addColorStop(.45,'rgba(110,70,255,.18)');gr.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=gr;c.fillRect(0,0,w,h);});
+  const pm=new THREE.Mesh(new THREE.PlaneGeometry(5.5,8.5),new THREE.MeshBasicMaterial({map:pool,transparent:true,depthWrite:false,toneMapped:false,blending:THREE.AdditiveBlending}));pm.rotation.x=-Math.PI/2;pm.position.set(0,-4.66,0.4);g.add(pm);
+  const vl=new THREE.PointLight(0x8f5bff,1.4,9,2);vl.position.set(0,0,3.2);g.add(vl);
+  const dk=new Map();const dark=mt=>{if(!mt||!mt.isMeshStandardMaterial)return mt;let m=dk.get(mt);if(!m){m=mt.clone();m.userData=Object.assign({},mt.userData);m.color.multiplyScalar(.38);if(m.metalness>.5)m.metalness=.5;m.envMapIntensity=.3;if(m.emissiveMap)m.emissiveIntensity*=.7;dk.set(mt,m);}return m;};g.traverse(o=>{if(!o.isMesh||!o.material)return;o.material=Array.isArray(o.material)?o.material.map(dark):dark(o.material);});
  }
  // COMPUTE TRAY: cold-plate machining, screws, handles, curved tubing,
  // fan-guards, edge-contact connector pins and small status indicators.
@@ -3436,7 +3513,7 @@ try{(function(){
      y+=u;});
    if(!em){c.fillStyle='rgba(120,160,200,.05)';for(let yy=0;yy<Hh;yy+=4)for(let xx=(yy/4)%2?2:0;xx<W;xx+=4)c.fillRect(xx,yy,1,1);}   // perforated door
  };
- const rackMap=tex(W,Hh,(c)=>drawRack(c,false)),rackEm=tex(W,Hh,(c)=>drawRack(c,true));
+ const rackMap=tex(W,Hh,(c,w,h)=>drawGBFront(c,w,h,false)),rackEm=tex(W,Hh,(c,w,h)=>drawGBFront(c,w,h,true));
  // clone every hall material once; upgrade by role
  const clones=new Map();const sys={fiber:[],busA:[],busB:[],cool:[],cdu:[],front:[]};
  g.traverse(o=>{if(!o.isMesh||!o.material||Array.isArray(o.material)||!o.material.isMeshStandardMaterial)return;const m=o.material;
