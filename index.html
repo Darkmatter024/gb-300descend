@@ -1030,6 +1030,15 @@ body.at-fork #fork{display:flex!important;flex-wrap:wrap;gap:4px 22px!important;
 body.hall-bd #labels .lab span:after{font:400 10px/1.3 'Geist Mono',var(--mono),monospace!important;letter-spacing:.05em!important;color:#d3d9df!important;text-transform:none!important}
 body .panel .panel-actions button.primary,body .panel .panel-actions button.primary *{text-transform:none!important;letter-spacing:0!important}
 #labels .lab.rs-hide{visibility:hidden!important}
+/* opening clean-up: no leftover boot screen, strike burst, early plate or stacked tags */
+#boot-scene{background:#020913!important}
+#boot-scene svg,#boot-scene .boot-note{display:none!important}
+body:not(.render-ready) #plate,body.prologue #plate{opacity:0!important;visibility:hidden!important}
+#frame:not([style]) .pl-tags{display:none!important}
+body.strike #streaks,body.strike #flash,#streaks{animation:none!important;opacity:0!important;visibility:hidden!important}
+body.strike #flash{display:none!important}
+body.strike #c{animation:none!important}
+#prologue #frame{transition:opacity .9s ease}
 /* path tabs: each path lights up in its own colour, underline only, never a box */
 body{--rs-acc:#7fd3ff}
 body[data-path=compute]{--rs-acc:#7fd3ff}body[data-path=data]{--rs-acc:#ffe27a}body[data-path=heat]{--rs-acc:#ff8a5c}
@@ -4337,6 +4346,8 @@ try{(function(){
  if(t)new MutationObserver(sub).observe(t,{childList:true,characterData:true,subtree:true});
  if(hd)new MutationObserver(sub).observe(hd,{childList:true,characterData:true,subtree:true});
  sub();
+ /* aerial photo fades in instead of popping */
+ const fr=document.getElementById('frame'),ae=document.getElementById('aerial');if(fr&&ae&&!(ae.complete&&ae.naturalWidth)){fr.style.opacity='0';const show=()=>{requestAnimationFrame(()=>{fr.style.opacity='1';});};ae.addEventListener('load',show,{once:true});ae.addEventListener('error',show,{once:true});setTimeout(show,4000);}
  /* callouts never sit behind the panel or the tour button */
  setInterval(()=>{const blocks=['.panel .card-inner','#htGo','.panel-actions','#fork'].map(q=>document.querySelector(q)).filter(e=>e&&e.offsetParent!==null).map(e=>e.getBoundingClientRect());
   document.querySelectorAll('#labels .lab').forEach(l=>{const sp=l.querySelector('span');if(!sp)return;const r=sp.getBoundingClientRect();const hit=blocks.some(b=>r.left<b.right+8&&r.right>b.left-8&&r.top<b.bottom+8&&r.bottom>b.top-8);l.classList.toggle('rs-hide',hit);});},200);
