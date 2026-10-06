@@ -181,7 +181,7 @@ body.ascending #iris{animation:iris-up 1.4s var(--ease) both}
 body.show-key #rackKey{opacity:1}
 body.immersive #rackKey,body.presenter #rackKey,body.prologue #rackKey{opacity:0!important}
 @media (max-height:820px){#rackKey{gap:3px;padding:7px 9px}#rackKey em{display:none}}
-@media (max-width:900px){#rackKey{right:var(--gutter);max-width:none;flex-direction:row;flex-wrap:wrap;column-gap:10px;row-gap:3px;top:calc(var(--gutter) + 64px + env(safe-area-inset-top,0px));font-size:8px;padding:7px 9px}#rackKey em{display:none}}
+@media (max-width:900px){#rackKey{left:var(--gutter);right:var(--gutter);bottom:auto;max-width:none;height:auto;flex-direction:row;flex-wrap:wrap;justify-content:flex-start;align-items:center;column-gap:10px;row-gap:4px;top:calc(var(--gutter) + 56px + env(safe-area-inset-top,0px));font-size:8px;letter-spacing:.08em;padding:6px 8px}#rackKey b{flex-basis:100%;font-size:7.5px}#rackKey span{gap:5px}#rackKey i{width:8px;height:8px}#rackKey i.aisle{height:4px}#rackKey em{display:none}}
 body.touched .hint{opacity:0}
 
 /* ---- boot scene (static art while the engine starts) ---- */
