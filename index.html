@@ -1877,14 +1877,34 @@ function cinematicDetail(scenes){
  // DATA HALL: detailed industrial scale, grated flooring, lit aisles,
  // overhead containment, A/B pathways and individual rack geometry.
  {
-  const g=scenes[3].g;addFloor(g,31.9,21.9,.012);
+  const g=scenes[3].g;
+  // Hall floor: dark 600 mm raised-floor tiles with seams and a light sheen (own texture, not the shared one)
+  {const T=tex(1024,1024,(c,w,h)=>{const n=4,sz=w/n;c.fillStyle='#161d25';c.fillRect(0,0,w,h);
+     for(let i=0;i<n;i++)for(let j=0;j<n;j++){const v=Math.floor(rnd()*7);c.fillStyle=`rgb(${22+v},${29+v},${37+v})`;c.fillRect(i*sz+3,j*sz+3,sz-6,sz-6);
+       const gr=c.createLinearGradient(i*sz,j*sz,i*sz+sz,j*sz+sz);gr.addColorStop(0,'rgba(255,255,255,.035)');gr.addColorStop(1,'rgba(0,0,0,.05)');c.fillStyle=gr;c.fillRect(i*sz+3,j*sz+3,sz-6,sz-6);}
+     c.strokeStyle='#080c10';c.lineWidth=5;for(let i=0;i<=n;i++){c.beginPath();c.moveTo(i*sz,0);c.lineTo(i*sz,h);c.stroke();c.beginPath();c.moveTo(0,i*sz);c.lineTo(w,i*sz);c.stroke();}
+     c.strokeStyle='rgba(120,150,175,.22)';c.lineWidth=1.5;for(let i=0;i<=n;i++){c.beginPath();c.moveTo(i*sz+3,0);c.lineTo(i*sz+3,h);c.stroke();c.beginPath();c.moveTo(0,i*sz+3);c.lineTo(w,i*sz+3);c.stroke();}});
+   T.wrapS=T.wrapT=THREE.RepeatWrapping;T.repeat.set(31.9/2.4,21.9/2.4);T.anisotropy=8;
+   const hallGround=new THREE.MeshStandardMaterial({map:T,color:'#ffffff',metalness:.35,roughness:.42});
+   const fl=new THREE.Mesh(new THREE.PlaneGeometry(31.9,21.9),hallGround);fl.rotation.x=-Math.PI/2;fl.position.set(0,.012,0);g.add(fl);
+   // perforated tiles: two lines in front of each rack row in the cold aisle
+   const P=tex(256,256,(c,w,h)=>{c.fillStyle='#1a232c';c.fillRect(0,0,w,h);c.fillStyle='#05080b';for(let i=0;i<14;i++)for(let j=0;j<14;j++){c.beginPath();c.arc(18+i*16.4,18+j*16.4,4.6,0,Math.PI*2);c.fill();}
+     c.strokeStyle='#080c10';c.lineWidth=6;c.strokeRect(0,0,w,h);c.strokeStyle='rgba(120,150,175,.25)';c.lineWidth=1.5;c.strokeRect(4,4,w-8,h-8);});
+   const perfM=new THREE.MeshStandardMaterial({map:P,metalness:.4,roughness:.45,emissive:new THREE.Color('#0d2a45'),emissiveIntensity:.35});
+   const pg=new THREE.PlaneGeometry(.58,.58);
+   [-1.5,-0.9,0.9,1.5].forEach(z=>{for(let x=-3.3;x<=3.31;x+=0.6){const m=new THREE.Mesh(pg,perfM);m.rotation.x=-Math.PI/2;m.position.set(x,.016,z);g.add(m);}});
+   // warm LED strips along the cold-aisle edges
+   const stripM=new THREE.MeshBasicMaterial({color:'#ffd8b0'});const stripG=new THREE.MeshBasicMaterial({color:'#ff9e5a',transparent:true,opacity:.22,blending:THREE.AdditiveBlending,depthWrite:false});
+   [-0.57,0.57].forEach(z=>{const s=new THREE.Mesh(new THREE.BoxGeometry(7.2,.014,.035),stripM);s.position.set(0,.024,z);g.add(s);
+     const gl=new THREE.Mesh(new THREE.PlaneGeometry(7.4,.34),stripG);gl.rotation.x=-Math.PI/2;gl.position.set(0,.021,z);g.add(gl);});
+  }
   const beam=M('#455664',{metalness:.84,roughness:.27});
   const black=M('#111922',{metalness:.7,roughness:.47});
   const fence=M('#4f6476',{metalness:.66,roughness:.37});
   // Raised floor seams + perforated ventilation tile islands
   const tile=[];for(let x=-15.2;x<=15;x+=1.05)for(let z=-10.2;z<=10;z+=1.05){
    if(rnd()<.88)tile.push([x,.018,z,1.03,.004,1.03]);}
-  inst(g,tile,M('#445564',{metalness:.3,roughness:.9,opacity:.095}));
+  // (old translucent seam overlay removed: the hall floor texture carries its own seams)
   for(let x=-15.3;x<=15.3;x+=3.1){
    box(g,.10,.13,20.5,beam,x,3.72,0);
    [-6.3,-2.8,1,5].forEach(z=>{
@@ -3321,7 +3341,7 @@ try{(function(){
  [[-4.8,-1],[-2.4,1],[2.4,-1],[4.8,1]].forEach(([z,f])=>[-4,4].forEach(x=>{box(g,0.6,0.5,0.02,cduGlow,x,0.55,z+f*0.61);box(g,0.5,0.06,0.02,E('#4dff9a',1),x,1.85,z+f*0.61);}));
  // floor glow under the rows and a warm-white work light
  const glowTex=tex(256,256,(c,w,h)=>{const gr=c.createRadialGradient(128,128,10,128,128,128);gr.addColorStop(0,'rgba(90,170,255,.55)');gr.addColorStop(.55,'rgba(60,120,220,.16)');gr.addColorStop(1,'rgba(40,80,160,0)');c.fillStyle=gr;c.fillRect(0,0,w,h);});
- const floorGlow=new THREE.Mesh(new THREE.PlaneGeometry(16,14),new THREE.MeshBasicMaterial({map:glowTex,transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));
+ const floorGlow=new THREE.Mesh(new THREE.PlaneGeometry(16,14),new THREE.MeshBasicMaterial({map:glowTex,transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));floorGlow.material.opacity=.07;
  floorGlow.rotation.x=-Math.PI/2;floorGlow.position.set(0,0.035,0);g.add(floorGlow);
  // focus halo on the rack we dive into
  const hc=new THREE.Color('#7fd3ff');
