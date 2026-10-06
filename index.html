@@ -568,6 +568,14 @@ body.presenter #present{display:inline-flex}
 #modesMenu [aria-checked=true] i{background:rgba(127,211,255,.45)}
 #modesMenu [aria-checked=true] i:after{transform:translateX(14px);background:#fff}
 #modesMenu .mm-sep{height:1px;margin:6px 8px;background:var(--line)}
+#about{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.6)}
+#about[hidden]{display:none}
+#about .ab-card{position:relative;width:min(440px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:20px 22px;border:1px solid var(--line);border-radius:14px;background:#08111c;box-shadow:0 18px 50px rgba(0,0,0,.6)}
+#about h3{margin:0 30px 10px 0;font:600 17px/1.25 var(--display);color:#fff}
+#about h4{margin:14px 0 4px;font:600 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--sig,#7fd3ff)}
+#about p{margin:0;font:400 13.5px/1.55 var(--body);color:#c6d6e6}
+#about a{color:#9fdcff}
+#about .ab-x{position:absolute;right:8px;top:8px;width:36px;height:36px;border:0;border-radius:10px;background:none;color:var(--sub,#9ab);font:400 22px/1 var(--body);cursor:pointer}
 @media (max-width:780px){#modesMenu{top:calc(env(safe-area-inset-top,0px) + 64px);right:16px}}
 body.lite-mode #modes,body.lite-mode #modesMenu{display:none!important}
 #narr{display:inline-flex;align-items:center;gap:8px;align-self:stretch;min-height:36px;padding:0 4px 0 12px;border:1px solid var(--sig-dim);border-radius:2px;background:rgba(6,12,20,.78);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);font:500 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#dbeeff;white-space:nowrap}
@@ -1161,7 +1169,9 @@ body .panel #fork button:focus-visible{outline:none!important;border-bottom-colo
 <button type="button" role="menuitemcheckbox" aria-checked="false" data-m="voice"><b>Read aloud</b><small>Speak each level as you arrive</small><i></i></button>
 <button type="button" role="menuitem" data-m="narrator"><b>Narrator</b><small id="vpName">Emma · British</small></button>
 <button type="button" role="menuitemcheckbox" aria-checked="false" data-m="real"><b>Real numbers</b><small>Swap “Picture it” for the engineering spec</small><i></i></button>
-</div><div id="tip" role="dialog" aria-live="polite"><button type="button" aria-label="Close">×</button><h4></h4><p></p></div><div id="toast" role="status"></div><aside class="gauge" aria-label="Depth gauge">
+<div class="mm-sep"></div>
+<button type="button" role="menuitem" data-m="about"><b>About &amp; sources</b><small>Where the numbers come from</small></button>
+</div><div id="about" role="dialog" aria-modal="true" aria-labelledby="aboutH" hidden><div class="ab-card"><button type="button" class="ab-x" aria-label="Close">×</button><h3 id="aboutH">About GB300 Descent</h3><p>An independent side project that walks from the power grid down to a single silicon atom through a GB300 NVL72 data hall. It isn't an official CoreWeave or NVIDIA product.</p><h4>What's real</h4><p>Rack, tray, GPU and memory figures follow NVIDIA's published GB300 NVL72 specs, rounded. Physics and chip-scale sizes are textbook values.</p><h4>What's typical</h4><p>The grid, campus, building and hall levels are typical layouts, not any real site. Power, cooling and floor figures there are rounded industry-typical values, not data from a live facility.</p><h4>Sources</h4><p><a href="https://www.nvidia.com/en-us/data-center/gb300-nvl72/" target="_blank" rel="noopener">NVIDIA GB300 NVL72</a><br><a href="https://github.com/Darkmatter024/gb-300descend" target="_blank" rel="noopener">Project source on GitHub</a></p></div></div><div id="tip" role="dialog" aria-live="polite"><button type="button" aria-label="Close">×</button><h4></h4><p></p></div><div id="toast" role="status"></div><aside class="gauge" aria-label="Depth gauge">
     <div class="gauge-head">Depth · log scale</div>
     <div class="rail" id="rail"><span class="marker" id="marker" data-v="6 km"></span></div>
     <div class="link"><svg aria-hidden="true"><line id="link-line" x1="0" y1="0" x2="44" y2="0"/><circle id="link-dot" r="2"/></svg></div>
@@ -4315,7 +4325,11 @@ requestAnimationFrame(frame);window.__GBframe=frame;
     else if(m==='present'){openM(false);if(window.__GBpresent)window.__GBpresent(true);}
     else if(m==='voice'){voiceOn=!voiceOn;if(!voiceOn)hush();else say(levelLine(),null,'L:'+ttl());sync();}
     else if(m==='narrator'){vname=vname==='emma'?'heart':'emma';try{localStorage.setItem('gb-voice',vname);}catch(e){}sync();say(levelLine(),null,'L:'+ttl());}
-    else if(m==='real'){setReal(!real);}});
+    else if(m==='real'){setReal(!real);}
+    else if(m==='about'){openM(false);const ab=document.getElementById('about');if(ab){ab.hidden=false;const x=ab.querySelector('.ab-x');if(x)x.focus();}}});
+  (function(){const ab=document.getElementById('about');if(!ab)return;const close=()=>{ab.hidden=true;if(mb)mb.focus();};
+    ab.addEventListener('click',e=>{if(e.target===ab||e.target.closest('.ab-x'))close();});
+    addEventListener('keydown',e=>{if(e.key==='Escape'&&!ab.hidden)close();});})();
   document.addEventListener('pointerdown',e=>{if(mm&&!mm.hidden&&!mm.contains(e.target)&&!mb.contains(e.target))openM(false);},true);
   addEventListener('keydown',e=>{if(e.key==='Escape'&&mm&&!mm.hidden){openM(false);mb.focus();}});
   setReal(real);sync();
