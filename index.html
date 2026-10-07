@@ -3625,8 +3625,8 @@ try{(function(){
    const L=[...el.children];let k=0,anim=null,loaded=0,want=null;const urls={};
    const kind=()=>innerWidth/innerHeight<1?'phone':'desk';
    const url=i=>'assets/tour/'+kind()+'_'+i+'.jpg';
-   const preload=()=>{for(let i=0;i<TSTOP.length;i++){const u=url(i);if(urls[u])continue;const im=new Image();urls[u]=im;im.onload=()=>{loaded++;if(want!==null&&url(want)===u)go(want);};im.src=u;}};
-   const go=i=>{want=i;const u=url(i),im=urls[u];if(!im||!im.complete||!im.naturalWidth)return;
+   const preload=(from)=>{from=from||0;const lim=kind()==='phone'?Math.min(TSTOP.length,from+2):TSTOP.length;for(let i=from;i<lim;i++){const u=url(i);if(urls[u])continue;const im=new Image();urls[u]=im;im.onload=()=>{loaded++;if(want!==null&&url(want)===u)go(want);};im.src=u;}};
+   const go=i=>{want=i;preload(i);const u=url(i),im=urls[u];if(!im||!im.complete||!im.naturalWidth)return;
      const nx=L[k^1],cu=L[k];nx.style.backgroundImage='url('+u+')';nx.style.transition='none';nx.style.transform='scale(1.0)';void nx.offsetWidth;
      nx.style.transition='opacity 1.1s ease, transform 9s cubic-bezier(.25,.1,.25,1)';nx.style.zIndex='2';cu.style.zIndex='1';nx.classList.add('on');nx.style.transform='scale(1.07)';const old=cu;setTimeout(()=>{if(old!==L[k])old.classList.remove('on');},1200);k^=1;el.classList.add('ready');};
    const off=()=>{want=null;el.classList.remove('ready');setTimeout(()=>{if(!document.body.classList.contains('hall-tour'))L.forEach(x=>x.classList.remove('on'));},950);};
@@ -4724,6 +4724,10 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
  if(!window.THREE||!pro||!app||!body.classList.contains('prologue')||body.classList.contains('lite-mode'))return;
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const T=window.THREE, small=Math.min(innerWidth,innerHeight)<760;
+ const ss=(v)=>{try{if(v===undefined)return localStorage.getItem('gbEarthRun')||sessionStorage.getItem('gbEarthRun');
+   if(v===null){localStorage.removeItem('gbEarthRun');sessionStorage.removeItem('gbEarthRun');}else{localStorage.setItem('gbEarthRun',v);sessionStorage.setItem('gbEarthRun',v);}}catch(_){return null;}};
+ {const pv=ss();if(pv&&Date.now()-(+pv)<30*60*1000){ss(null);return;}}
+ ss(String(Date.now()));
  const G=window.__GBglobe={active:true,skip:null};
  const st=document.createElement('style');st.textContent=
   '#globe{position:absolute;inset:0;z-index:21;background:#01030a;opacity:1;transition:opacity 1.2s ease}#globe.out{opacity:0;pointer-events:none}'+
@@ -4738,13 +4742,13 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
  pro.insertAdjacentElement('afterend',wrap);
  const cv=document.createElement('canvas');wrap.insertBefore(cv,wrap.firstChild);
  let renderer=null,raf=0,done=false;const timers=[],texs=[];
- const release=(fast)=>{if(done)return;done=true;G.active=false;timers.forEach(clearTimeout);cancelAnimationFrame(raf);
+ const release=(fast)=>{if(done)return;done=true;G.active=false;ss(null);timers.forEach(clearTimeout);cancelAnimationFrame(raf);
    wrap.style.transition=fast?'opacity .35s ease':'';wrap.classList.add('out');
    setTimeout(()=>{try{texs.forEach(t=>t.dispose());renderer&&renderer.dispose();renderer&&renderer.forceContextLoss&&renderer.forceContextLoss();}catch(_){}wrap.remove();},fast?450:1400);
    dispatchEvent(new Event('gbglobedone'));};
  G.skip=()=>release(true);
- try{renderer=new T.WebGLRenderer({canvas:cv,antialias:true,alpha:false,powerPreference:'high-performance'});}catch(e){release(true);return;}
- const DPR=Math.min(devicePixelRatio||1,small?2:2);renderer.setPixelRatio(DPR);renderer.setClearColor(0x01030a,1);
+ try{renderer=new T.WebGLRenderer({canvas:cv,antialias:!small,alpha:false,powerPreference:'high-performance'});}catch(e){release(true);return;}
+ const DPR=Math.min(devicePixelRatio||1,small?1.5:2);renderer.setPixelRatio(DPR);renderer.setClearColor(0x01030a,1);
  const scene=new T.Scene(),cam=new T.PerspectiveCamera(small?42:34,1,0.001,100);
  const size=()=>{const w=wrap.clientWidth||innerWidth,h=wrap.clientHeight||innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();};
  size();addEventListener('resize',size);
@@ -4754,13 +4758,14 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
  // late evening on the US East coast, June: the terminator sits out over the Atlantic, the cities are lit
  const sun=ll(23.4,ASH[1]+112,1).normalize();
  const L=new T.TextureLoader();const base='assets/earth/';
- const ld=(f,srgb)=>new Promise((res,rej)=>{L.load(base+f,t=>{t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());if(srgb&&T.sRGBEncoding)t.encoding=T.sRGBEncoding;texs.push(t);res(t);},undefined,rej);});
+ const ld=(f,srgb)=>new Promise((res,rej)=>{L.load(base+f,t=>{t.anisotropy=small?1:Math.min(8,renderer.capabilities.getMaxAnisotropy());if(srgb&&T.sRGBEncoding)t.encoding=T.sRGBEncoding;texs.push(t);res(t);},undefined,rej);});
  timers.push(setTimeout(()=>{if(!started)release(true);},7000));
  let started=false;
- Promise.all([ld('day.jpg'),ld('night.jpg'),ld('water.jpg'),ld(small?'clouds_2k.jpg':'clouds.jpg'),ld('topo.jpg')]).then(([day,night,water,clouds,topo])=>{if(done)return;started=true;build(day,night,water,clouds,topo);}).catch(()=>release(true));
+ Promise.all(small?[ld('day_2k.jpg'),ld('night_2k.jpg'),ld('water_1k.jpg'),ld('clouds_1k.jpg'),ld('topo_1k.jpg')]:[ld('day.jpg'),ld('night.jpg'),ld('water.jpg'),ld('clouds.jpg'),ld('topo.jpg')]).then(([day,night,water,clouds,topo])=>{if(done)return;started=true;build(day,night,water,clouds,topo);}).catch(()=>release(true));
  function build(day,night,water,clouds,topo){
   const R=1;
-  const earthM=new T.ShaderMaterial({uniforms:{dayMap:{value:day},nightMap:{value:night},waterMap:{value:water},cloudMap:{value:clouds},topoMap:{value:topo},sunDir:{value:sun},cloudShift:{value:0}},
+  const NS=small?'2.0':'1.0';
+  const earthM=new T.ShaderMaterial({defines:{NSCALE:NS},uniforms:{dayMap:{value:day},nightMap:{value:night},waterMap:{value:water},cloudMap:{value:clouds},topoMap:{value:topo},sunDir:{value:sun},cloudShift:{value:0}},
    vertexShader:'varying vec2 vUv;varying vec3 vN;varying vec3 vP;void main(){vUv=uv;vN=normalize(mat3(modelMatrix)*normal);vec4 wp=modelMatrix*vec4(position,1.0);vP=wp.xyz;gl_Position=projectionMatrix*viewMatrix*wp;}',
    fragmentShader:`uniform sampler2D dayMap,nightMap,waterMap,cloudMap,topoMap;uniform vec3 sunDir;uniform float cloudShift;varying vec2 vUv;varying vec3 vN;varying vec3 vP;
     void main(){vec3 n=normalize(vN);vec3 v=normalize(cameraPosition-vP);float ndl=dot(n,sunDir);
@@ -4772,14 +4777,14 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
      float water=texture2D(waterMap,vUv).r;
      vec3 h=normalize(sunDir+v);float sp=pow(max(dot(n,h),0.0),220.0)*water*smoothstep(0.0,0.2,ndl)*smoothstep(0.1,0.5,dot(n,v));
      col+=vec3(1.0,0.93,0.8)*sp*0.32+vec3(0.06,0.12,0.2)*water*lit*0.35;
-     vec2 px=vec2(1.6/4096.0,1.6/2048.0);vec3 nl=texture2D(nightMap,vUv).rgb*0.28;
+     vec2 px=vec2(1.6/4096.0,1.6/2048.0)*NSCALE;vec3 nl=texture2D(nightMap,vUv).rgb*0.28;
      nl+=(texture2D(nightMap,vUv+vec2(px.x,0.0)).rgb+texture2D(nightMap,vUv-vec2(px.x,0.0)).rgb+texture2D(nightMap,vUv+vec2(0.0,px.y)).rgb+texture2D(nightMap,vUv-vec2(0.0,px.y)).rgb)*0.12;
      nl+=(texture2D(nightMap,vUv+px).rgb+texture2D(nightMap,vUv-px).rgb+texture2D(nightMap,vUv+vec2(px.x,-px.y)).rgb+texture2D(nightMap,vUv+vec2(-px.x,px.y)).rgb)*0.06;float nk=1.0-smoothstep(-0.22,0.06,ndl);
      col+=pow(nl,vec3(1.25))*vec3(1.45,1.05,0.6)*3.4*nk*(1.0-0.55*cl);
      float term=exp(-pow((ndl-0.02)/0.09,2.0));col+=vec3(0.55,0.22,0.06)*term*0.09;
      float fr=pow(1.0-max(dot(n,v),0.0),2.6);col+=vec3(0.28,0.55,1.0)*fr*(0.08+0.9*smoothstep(-0.25,0.45,ndl));
      gl_FragColor=vec4(col,1.0);}`});
-  const seg=small?128:192;
+  const seg=small?96:192;
   const earth=new T.Mesh(new T.SphereGeometry(R,seg,seg/2),earthM);scene.add(earth);
   const cloudM=new T.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{cloudMap:{value:clouds},sunDir:{value:sun},cloudShift:{value:0}},
    vertexShader:'varying vec2 vUv;varying vec3 vN;varying vec3 vP;void main(){vUv=uv;vN=normalize(mat3(modelMatrix)*normal);vec4 wp=modelMatrix*vec4(position,1.0);vP=wp.xyz;gl_Position=projectionMatrix*viewMatrix*wp;}',
@@ -4804,7 +4809,7 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
   // camera path: wide over the Atlantic -> sweep west and down over the lit US East coast -> skim toward Ashburn
   const target=ll(ASH[0],ASH[1],R);
   const d0=ll(30,-60,1).normalize(),d1=ll(27.5,-83.0,1).normalize(),lookEnd=ll(40.2,-74.5,R);
-  const D0=small?4.3:4.6,D1=small?1.95:1.75;
+  const D0=small?4.3:4.6,D1=small?2.4:1.75;
   const cap=wrap.querySelector('.gcap'),alt=wrap.querySelector('.galt'),flash=wrap.querySelector('.gflash');
   const fmt=km=>km>=100?Math.round(km).toLocaleString()+' km':km.toFixed(1)+' km';
   const ease=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
