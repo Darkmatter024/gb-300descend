@@ -4641,7 +4641,7 @@ try{(function(){
   widget.clock.currentTime=C.JulianDate.fromIso8601('2026-06-21T23:10:00Z');widget.clock.shouldAnimate=false;
   if(TOKEN){C.createGooglePhotorealistic3DTileset().then(ts=>{if(done)return;sc.primitives.add(ts);sc.globe.show=false;}).catch(()=>{});}
   // full device resolution (capped at 2x for frame rate), sharper tiles, HDR, MSAA + FXAA, softer bloom on city light
-  widget.useBrowserRecommendedResolution=false;widget.resolutionScale=Math.min(2,devicePixelRatio||1);
+  widget.useBrowserRecommendedResolution=false;widget.resolutionScale=Math.min(1,2/(devicePixelRatio||1));
   sc.globe.maximumScreenSpaceError=1.5;sc.globe.tileCacheSize=300;
   try{sc.highDynamicRange=true;}catch(_){}
   try{sc.msaaSamples=4;}catch(_){}
