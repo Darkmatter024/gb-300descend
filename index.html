@@ -4597,7 +4597,9 @@ try{(function(){
  const GB_ION_TOKEN='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6InRxQVB2UEtCdnVLUm5GbnkiLCJqdGkiOiIyYTJhMGFlMS05MWUyLTRkNGYtYmExZC1lYjQ0NzBlYjVhNDkiLCJpZCI6NTE2NzQzLCJzdWIiOiJEYXJrbWF0dGVyeDEiLCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoiRGVzY2VudCAiLCJpYXQiOjE3OTEzNDAwOTF9.lWBgzMeHjCSlfK9UQIzsE7ykddkR8yGlY-ewEoU_Npk';                        // paste a Cesium ion token here (restrict it to your github.io URL in ion)
  const BASE=window.__GB_CESIUM_BASE||'https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/';
  const qs=new URLSearchParams(location.search);
- const TOKEN=qs.get('ion')||GB_ION_TOKEN;
+ // Photoreal 3D only on larger screens: on iPhone it shares the tab's WebGL memory with the 3D hall and gets the tab killed.
+ // Phones get the satellite-imagery globe (proven stable). ?photoreal forces 3D for testing.
+ const TOKEN=(innerWidth>=760||qs.has('photoreal'))?(qs.get('ion')||GB_ION_TOKEN):'';
  const body=document.body, app=document.getElementById('app'), pro=document.getElementById('prologue');
  if(!pro||!app||!body.classList.contains('prologue')||body.classList.contains('lite-mode'))return;
  if(qs.has('noglobe')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
