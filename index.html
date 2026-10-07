@@ -4594,7 +4594,7 @@ try{(function(){
  * Anything going wrong (no WebGL, CDN unreachable, slow load, reduced motion) simply skips it and the
  * aerial-photo opening plays exactly as before. */
 (function(){try{
- const GB_ION_TOKEN='';                        // paste a Cesium ion token here (restrict it to your github.io URL in ion)
+ const GB_ION_TOKEN='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6InRxQVB2UEtCdnVLUm5GbnkiLCJqdGkiOiIyYTJhMGFlMS05MWUyLTRkNGYtYmExZC1lYjQ0NzBlYjVhNDkiLCJpZCI6NTE2NzQzLCJzdWIiOiJEYXJrbWF0dGVyeDEiLCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoiRGVzY2VudCAiLCJpYXQiOjE3OTEzNDAwOTF9.lWBgzMeHjCSlfK9UQIzsE7ykddkR8yGlY-ewEoU_Npk';                        // paste a Cesium ion token here (restrict it to your github.io URL in ion)
  const BASE=window.__GB_CESIUM_BASE||'https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/';
  const qs=new URLSearchParams(location.search);
  const TOKEN=qs.get('ion')||GB_ION_TOKEN;
@@ -4639,7 +4639,7 @@ try{(function(){
   sc.globe.baseColor=C.Color.fromCssColorString('#06121f');
   // late-day light over the US East coast: the landing reads as dusk, which hands off cleanly to the night aerial
   widget.clock.currentTime=C.JulianDate.fromIso8601('2026-06-21T23:10:00Z');widget.clock.shouldAnimate=false;
-  if(TOKEN){C.createGooglePhotorealistic3DTileset().then(ts=>{if(done)return;sc.primitives.add(ts);sc.globe.show=false;}).catch(()=>{});}
+  if(TOKEN){C.createGooglePhotorealistic3DTileset({maximumScreenSpaceError:8}).then(ts=>{if(done)return;sc.primitives.add(ts);sc.globe.show=false;}).catch(e=>{console.warn('photoreal tiles',e);sc.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',maximumLevel:19,credit:'Esri, Maxar, Earthstar Geographics'}));});}
   // full device resolution (capped at 2x for frame rate), sharper tiles, HDR, MSAA + FXAA, softer bloom on city light
   widget.useBrowserRecommendedResolution=false;widget.resolutionScale=Math.min(1,2/(devicePixelRatio||1));
   sc.globe.maximumScreenSpaceError=1.5;sc.globe.tileCacheSize=300;
@@ -4657,11 +4657,12 @@ try{(function(){
   let spin=true;sc.preRender.addEventListener(()=>{if(spin)cam.rotate(C.Cartesian3.UNIT_Z,-0.0009);
     const h=cam.positionCartographic.height;alt.textContent='Altitude '+fmt(h);});
   timers.push(setTimeout(()=>{if(done)return;spin=false;cap.classList.add('on');
-    cam.flyTo({destination:C.Cartesian3.fromDegrees(-77.462,38.978,TOKEN?900:1600),
-      orientation:{heading:C.Math.toRadians(345),pitch:C.Math.toRadians(TOKEN?-28:-42),roll:0},
-      duration:7.5,easingFunction:C.EasingFunction.QUINTIC_IN_OUT,
-      complete:()=>{timers.push(setTimeout(()=>{cap.classList.remove('on');release(false);},1400));}});},1400));
-  timers.push(setTimeout(()=>release(false),16000));                    // never hold the opening longer than this
+    cam.flyTo({destination:TOKEN?C.Cartesian3.fromDegrees(-77.4655,39.0035,520):C.Cartesian3.fromDegrees(-77.462,38.978,1600),
+      orientation:{heading:C.Math.toRadians(TOKEN?12:345),pitch:C.Math.toRadians(TOKEN?-24:-42),roll:0},
+      duration:TOKEN?9:7.5,easingFunction:C.EasingFunction.QUINTIC_IN_OUT,
+      complete:()=>{if(TOKEN)cam.flyTo({destination:C.Cartesian3.fromDegrees(-77.4642,39.0088,430),orientation:{heading:C.Math.toRadians(20),pitch:C.Math.toRadians(-20),roll:0},duration:3.2,easingFunction:C.EasingFunction.SINUSOIDAL_IN_OUT});
+        timers.push(setTimeout(()=>{cap.classList.remove('on');release(false);},TOKEN?3000:1400));}});},1400));
+  timers.push(setTimeout(()=>release(false),TOKEN?20000:16000));                    // never hold the opening longer than this
  }
 }catch(e){try{console.warn('orbit opening disabled',e);}catch(_){}
   try{if(window.__GBglobe){window.__GBglobe.active=false;}const g=document.getElementById('globe');g&&g.remove();}catch(_){}}})();
