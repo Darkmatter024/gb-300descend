@@ -4602,6 +4602,7 @@ try{(function(){
  const TOKEN=(innerWidth>=760||qs.has('photoreal'))?(qs.get('ion')||GB_ION_TOKEN):'';
  const body=document.body, app=document.getElementById('app'), pro=document.getElementById('prologue');
  if(!pro||!app||!body.classList.contains('prologue')||body.classList.contains('lite-mode'))return;
+ if(!qs.has('photoreal'))return;                 // the Cesium globe is now opt-in; the default opening is the cinematic Earth below
  if(qs.has('noglobe')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  try{const c=document.createElement('canvas');if(!(c.getContext('webgl2')||c.getContext('webgl')))return;}catch(_){return;}
  // crash guard: if the last globe run never finished (e.g. iOS killed the tab for memory), skip it once
@@ -4694,5 +4695,121 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
  }
 }catch(e){try{console.warn('orbit opening disabled',e);}catch(_){}
   try{if(window.__GBglobe){window.__GBglobe.active=false;}const g=document.getElementById('globe');g&&g.remove();}catch(_){}}})();
+</script>
+<script>
+/* ===== Orbit opening: cinematic Earth (NASA Blue Marble day, Black Marble city lights, clouds, ocean glint,
+ * atmosphere) pushing in at dusk over the US East coast to Ashburn, VA, then through the clouds into the night
+ * aerial. Pure three.js on its own canvas, textures in assets/earth. Anything wrong -> classic opening. */
+(function(){try{
+ const qs=new URLSearchParams(location.search), body=document.body, app=document.getElementById('app'), pro=document.getElementById('prologue');
+ if(qs.has('photoreal')||qs.has('noglobe'))return;
+ if(!window.THREE||!pro||!app||!body.classList.contains('prologue')||body.classList.contains('lite-mode'))return;
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const T=window.THREE, small=Math.min(innerWidth,innerHeight)<760;
+ const G=window.__GBglobe={active:true,skip:null};
+ const st=document.createElement('style');st.textContent=
+  '#globe{position:absolute;inset:0;z-index:21;background:#01030a;opacity:1;transition:opacity 1.2s ease}#globe.out{opacity:0;pointer-events:none}'+
+  '#globe canvas{position:absolute;inset:0;width:100%;height:100%;display:block}'+
+  '#globe .gflash{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 55%,rgba(220,232,255,.95),rgba(120,150,200,.6) 45%,rgba(4,10,20,0) 80%);opacity:0;transition:opacity .9s ease;pointer-events:none}'+
+  '#globe .gcap{position:absolute;left:50%;top:calc(17% + env(safe-area-inset-top,0px));transform:translateX(-50%);text-align:center;font:500 10px/1.8 var(--mono,monospace);letter-spacing:.26em;color:#cfe6ff;text-transform:uppercase;text-shadow:0 1px 14px rgba(0,0,0,.9);opacity:0;transition:opacity .9s ease;pointer-events:none;white-space:nowrap}'+
+  '#globe .gcap b{display:block;font:600 13px/1.5 var(--mono,monospace);letter-spacing:.22em;color:#fff}#globe .gcap.on{opacity:1}'+
+  '#globe .gcred{position:absolute;right:12px;top:calc(60px + env(safe-area-inset-top,0px));font:400 9px/1.3 var(--body,sans-serif);color:rgba(255,255,255,.45)}';
+ document.head.appendChild(st);
+ const wrap=document.createElement('div');wrap.id='globe';wrap.setAttribute('aria-hidden','true');
+ wrap.innerHTML='<div class="gcap"><b>Data Center Alley</b><span>Ashburn, Virginia</span><br><span class="galt">Altitude —</span></div><div class="gflash"></div><div class="gcred">Imagery: NASA</div>';
+ pro.insertAdjacentElement('afterend',wrap);
+ const cv=document.createElement('canvas');wrap.insertBefore(cv,wrap.firstChild);
+ let renderer=null,raf=0,done=false;const timers=[],texs=[];
+ const release=(fast)=>{if(done)return;done=true;G.active=false;timers.forEach(clearTimeout);cancelAnimationFrame(raf);
+   wrap.style.transition=fast?'opacity .35s ease':'';wrap.classList.add('out');
+   setTimeout(()=>{try{texs.forEach(t=>t.dispose());renderer&&renderer.dispose();renderer&&renderer.forceContextLoss&&renderer.forceContextLoss();}catch(_){}wrap.remove();},fast?450:1400);
+   dispatchEvent(new Event('gbglobedone'));};
+ G.skip=()=>release(true);
+ try{renderer=new T.WebGLRenderer({canvas:cv,antialias:true,alpha:false,powerPreference:'high-performance'});}catch(e){release(true);return;}
+ const DPR=Math.min(devicePixelRatio||1,small?2:2);renderer.setPixelRatio(DPR);renderer.setClearColor(0x01030a,1);
+ const scene=new T.Scene(),cam=new T.PerspectiveCamera(small?42:34,1,0.001,100);
+ const size=()=>{const w=wrap.clientWidth||innerWidth,h=wrap.clientHeight||innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();};
+ size();addEventListener('resize',size);
+ // geography: three's sphere UVs <-> equirectangular textures
+ const ll=(lat,lon,r)=>{const p=(90-lat)*Math.PI/180,t=(lon+180)*Math.PI/180;return new T.Vector3(-r*Math.sin(p)*Math.cos(t),r*Math.cos(p),r*Math.sin(p)*Math.sin(t));};
+ const ASH=[39.0,-77.46];
+ // late evening on the US East coast, June: the terminator sits out over the Atlantic, the cities are lit
+ const sun=ll(23.4,ASH[1]+112,1).normalize();
+ const L=new T.TextureLoader();const base='assets/earth/';
+ const ld=(f,srgb)=>new Promise((res,rej)=>{L.load(base+f,t=>{t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());if(srgb&&T.sRGBEncoding)t.encoding=T.sRGBEncoding;texs.push(t);res(t);},undefined,rej);});
+ timers.push(setTimeout(()=>{if(!started)release(true);},7000));
+ let started=false;
+ Promise.all([ld('day.jpg'),ld('night.jpg'),ld('water.jpg'),ld(small?'clouds_2k.jpg':'clouds.jpg'),ld('topo.jpg')]).then(([day,night,water,clouds,topo])=>{if(done)return;started=true;build(day,night,water,clouds,topo);}).catch(()=>release(true));
+ function build(day,night,water,clouds,topo){
+  const R=1;
+  const earthM=new T.ShaderMaterial({uniforms:{dayMap:{value:day},nightMap:{value:night},waterMap:{value:water},cloudMap:{value:clouds},topoMap:{value:topo},sunDir:{value:sun},cloudShift:{value:0}},
+   vertexShader:'varying vec2 vUv;varying vec3 vN;varying vec3 vP;void main(){vUv=uv;vN=normalize(mat3(modelMatrix)*normal);vec4 wp=modelMatrix*vec4(position,1.0);vP=wp.xyz;gl_Position=projectionMatrix*viewMatrix*wp;}',
+   fragmentShader:`uniform sampler2D dayMap,nightMap,waterMap,cloudMap,topoMap;uniform vec3 sunDir;uniform float cloudShift;varying vec2 vUv;varying vec3 vN;varying vec3 vP;
+    void main(){vec3 n=normalize(vN);vec3 v=normalize(cameraPosition-vP);float ndl=dot(n,sunDir);
+     vec3 day=texture2D(dayMap,vUv).rgb;day=pow(day,vec3(1.08));
+     float topo=texture2D(topoMap,vUv).r;
+     float cl=texture2D(cloudMap,vUv+vec2(cloudShift-0.004,0.002)).r;        // offset sample = cloud shadow
+     float lit=clamp(ndl*1.1+0.05,0.0,1.0);
+     vec3 col=day*(0.025+1.25*lit)*(1.0-0.45*cl*lit)*(0.92+0.16*topo);
+     float water=texture2D(waterMap,vUv).r;
+     vec3 h=normalize(sunDir+v);float sp=pow(max(dot(n,h),0.0),220.0)*water*smoothstep(0.0,0.2,ndl)*smoothstep(0.1,0.5,dot(n,v));
+     col+=vec3(1.0,0.93,0.8)*sp*0.32+vec3(0.06,0.12,0.2)*water*lit*0.35;
+     vec2 px=vec2(1.6/4096.0,1.6/2048.0);vec3 nl=texture2D(nightMap,vUv).rgb*0.28;
+     nl+=(texture2D(nightMap,vUv+vec2(px.x,0.0)).rgb+texture2D(nightMap,vUv-vec2(px.x,0.0)).rgb+texture2D(nightMap,vUv+vec2(0.0,px.y)).rgb+texture2D(nightMap,vUv-vec2(0.0,px.y)).rgb)*0.12;
+     nl+=(texture2D(nightMap,vUv+px).rgb+texture2D(nightMap,vUv-px).rgb+texture2D(nightMap,vUv+vec2(px.x,-px.y)).rgb+texture2D(nightMap,vUv+vec2(-px.x,px.y)).rgb)*0.06;float nk=1.0-smoothstep(-0.22,0.06,ndl);
+     col+=pow(nl,vec3(1.25))*vec3(1.45,1.05,0.6)*3.4*nk*(1.0-0.55*cl);
+     float term=exp(-pow((ndl-0.02)/0.09,2.0));col+=vec3(0.55,0.22,0.06)*term*0.09;
+     float fr=pow(1.0-max(dot(n,v),0.0),2.6);col+=vec3(0.28,0.55,1.0)*fr*(0.08+0.9*smoothstep(-0.25,0.45,ndl));
+     gl_FragColor=vec4(col,1.0);}`});
+  const seg=small?128:192;
+  const earth=new T.Mesh(new T.SphereGeometry(R,seg,seg/2),earthM);scene.add(earth);
+  const cloudM=new T.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{cloudMap:{value:clouds},sunDir:{value:sun},cloudShift:{value:0}},
+   vertexShader:'varying vec2 vUv;varying vec3 vN;varying vec3 vP;void main(){vUv=uv;vN=normalize(mat3(modelMatrix)*normal);vec4 wp=modelMatrix*vec4(position,1.0);vP=wp.xyz;gl_Position=projectionMatrix*viewMatrix*wp;}',
+   fragmentShader:`uniform sampler2D cloudMap;uniform vec3 sunDir;uniform float cloudShift;varying vec2 vUv;varying vec3 vN;varying vec3 vP;
+    void main(){vec3 n=normalize(vN);float ndl=dot(n,sunDir);float c=texture2D(cloudMap,vUv+vec2(cloudShift,0.0)).r;c=smoothstep(0.08,0.95,c);
+     float lit=clamp(ndl*1.15+0.08,0.0,1.0);vec3 col=mix(vec3(0.015,0.02,0.035),vec3(1.0,0.99,0.97),lit);
+     float term=exp(-pow((ndl-0.02)/0.1,2.0));col+=vec3(0.45,0.2,0.08)*term*0.35;
+     gl_FragColor=vec4(col,c*0.92*mix(0.3,1.0,smoothstep(-0.15,0.15,ndl)));}`});
+  const cloudsMesh=new T.Mesh(new T.SphereGeometry(R*1.006,seg,seg/2),cloudM);scene.add(cloudsMesh);
+  const atmM=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.BackSide,blending:T.AdditiveBlending,uniforms:{sunDir:{value:sun}},
+   vertexShader:'varying vec3 vN;varying vec3 vP;void main(){vN=normalize(mat3(modelMatrix)*normal);vec4 wp=modelMatrix*vec4(position,1.0);vP=wp.xyz;gl_Position=projectionMatrix*viewMatrix*wp;}',
+   fragmentShader:`uniform vec3 sunDir;varying vec3 vN;varying vec3 vP;void main(){vec3 n=normalize(vN);vec3 v=normalize(cameraPosition-vP);
+     float rim=pow(clamp(1.0+dot(v,n)*1.0,0.0,1.0),0.0);float a=pow(max(0.0,dot(-v,n)),5.5);
+     float d=dot(n,sunDir);float s=smoothstep(-0.35,0.5,d);vec3 col=mix(vec3(0.04,0.08,0.2),vec3(0.35,0.62,1.0),s);
+     col+=vec3(1.0,0.45,0.15)*exp(-pow((d+0.05)/0.14,2.0))*0.55;
+     gl_FragColor=vec4(col*a*1.9,1.0);}`});
+  scene.add(new T.Mesh(new T.SphereGeometry(R*1.045,96,48),atmM));
+  // stars
+  const N=small?1400:2600,sp=new Float32Array(N*3),sc=new Float32Array(N);for(let i=0;i<N;i++){const u=Math.random()*2-1,t=Math.random()*6.283,r=40;const s=Math.sqrt(1-u*u);sp.set([r*s*Math.cos(t),r*u,r*s*Math.sin(t)],i*3);}
+  const sg=new T.BufferGeometry();sg.setAttribute('position',new T.BufferAttribute(sp,3));
+  scene.add(new T.Points(sg,new T.PointsMaterial({color:0xc9dcff,size:small?0.07:0.06,sizeAttenuation:true,transparent:true,opacity:.85,depthWrite:false})));
+  // camera path: wide over the Atlantic -> sweep west and down over the lit US East coast -> skim toward Ashburn
+  const target=ll(ASH[0],ASH[1],R);
+  const d0=ll(30,-60,1).normalize(),d1=ll(27.5,-83.0,1).normalize(),lookEnd=ll(40.2,-74.5,R);
+  const D0=small?4.3:4.6,D1=small?1.95:1.75;
+  const cap=wrap.querySelector('.gcap'),alt=wrap.querySelector('.galt'),flash=wrap.querySelector('.gflash');
+  const fmt=km=>km>=100?Math.round(km).toLocaleString()+' km':km.toFixed(1)+' km';
+  const ease=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
+  const slerp=(a,b,u)=>{const o=Math.acos(Math.min(1,Math.max(-1,a.dot(b))));if(o<1e-4)return a.clone();const s=Math.sin(o);return a.clone().multiplyScalar(Math.sin((1-u)*o)/s).add(b.clone().multiplyScalar(Math.sin(u*o)/s)).normalize();};
+  const HOLD=1.6,FLY=8.4,END=HOLD+FLY;const t0=performance.now();let capOn=false,flashed=false;
+  const Y=new T.Vector3(0,1,0);
+  const frame=()=>{if(done)return;raf=requestAnimationFrame(frame);
+   const FZ=qs.get('gbt');const t=FZ!=null?+FZ:(performance.now()-t0)/1000;earthM.uniforms.cloudShift.value=cloudM.uniforms.cloudShift.value=t*0.0009;
+   let dir,dist,look;
+   const a0=Math.min(t,HOLD)*0.03;const ds=d0.clone().applyAxisAngle(Y,-a0);
+   if(t<HOLD){dir=ds;dist=D0;look=new T.Vector3();}
+   else{const u=Math.min(1,(t-HOLD)/FLY),e=ease(u);
+     dir=slerp(ds,d1,Math.min(1,e*1.08));dist=D0*Math.pow(D1/D0,e);              // exponential zoom reads like a real push-in
+     const tilt=Math.pow(Math.max(0,(e-0.35)/0.65),1.4)*0.7;look=new T.Vector3().lerp(lookEnd,tilt);
+     if(!capOn&&u>0.08){capOn=true;cap.classList.add('on');}
+     if(!flashed&&u>=1&&FZ==null){flashed=true;cap.classList.remove('on');timers.push(setTimeout(()=>release(false),900));}}
+   cam.position.copy(dir.multiplyScalar(dist));
+   const up=new T.Vector3(0,1,0);cam.up.copy(up);cam.lookAt(look);
+   alt.textContent='Altitude '+fmt((cam.position.length()-R)*6371);
+   renderer.render(scene,cam);};
+  frame();
+  if(qs.get('gbt')==null)timers.push(setTimeout(()=>release(false),(END+4)*1000));
+ }
+}catch(e){try{console.warn('earth opening disabled',e);}catch(_){}try{if(window.__GBglobe)window.__GBglobe.active=false;const g=document.getElementById('globe');g&&g.remove();}catch(_){}}})();
 </script>
 </body></html>
