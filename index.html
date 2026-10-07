@@ -4602,6 +4602,10 @@ try{(function(){
  if(!pro||!app||!body.classList.contains('prologue')||body.classList.contains('lite-mode'))return;
  if(qs.has('noglobe')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  try{const c=document.createElement('canvas');if(!(c.getContext('webgl2')||c.getContext('webgl')))return;}catch(_){return;}
+ // crash guard: if the last globe run never finished (e.g. iOS killed the tab for memory), skip it once
+ const LS=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);}catch(_){return null;}};
+ const prev=LS('gbGlobeRun');if(prev&&Date.now()-(+prev)<10*60*1000){LS('gbGlobeRun',null);return;}
+ LS('gbGlobeRun',String(Date.now()));
  const G=window.__GBglobe={active:true,skip:null};
  const st=document.createElement('style');st.textContent=
   '#globe{position:absolute;inset:0;z-index:21;background:#000;opacity:1;transition:opacity 1.1s ease}#globe.out{opacity:0;pointer-events:none}'+
@@ -4616,7 +4620,7 @@ try{(function(){
  wrap.innerHTML='<div class="gv"></div><div class="gcap"><b>Data Center Alley</b><span>Ashburn, Virginia</span><br><span class="galt">Altitude —</span></div><div class="gcred"></div>';
  pro.insertAdjacentElement('afterend',wrap);
  let widget=null,done=false,timers=[];
- const release=(fast)=>{if(done)return;done=true;G.active=false;timers.forEach(clearTimeout);
+ const release=(fast)=>{if(done)return;done=true;G.active=false;LS('gbGlobeRun',null);timers.forEach(clearTimeout);
    wrap.style.transition=fast?'opacity .35s ease':'';wrap.classList.add('out');
    setTimeout(()=>{try{widget&&widget.destroy();}catch(_){}wrap.remove();},fast?450:1300);
    dispatchEvent(new Event('gbglobedone'));};
@@ -4640,12 +4644,12 @@ try{(function(){
   // late-day light over the US East coast: the landing reads as dusk, which hands off cleanly to the night aerial
   widget.clock.currentTime=C.JulianDate.fromIso8601('2026-06-21T23:10:00Z');widget.clock.shouldAnimate=false;
   let TS=null;const small=innerWidth<760;
-  if(TOKEN){C.createGooglePhotorealistic3DTileset({maximumScreenSpaceError:small?6:3,cacheBytes:(small?384:1024)*1048576,maximumCacheOverflowBytes:(small?256:512)*1048576,preloadFlightDestinations:true}).then(ts=>{if(done)return;TS=ts;sc.primitives.add(ts);sc.globe.show=false;}).catch(e=>{console.warn('photoreal tiles',e);sc.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',maximumLevel:19,credit:'Esri, Maxar, Earthstar Geographics'}));});}
+  if(TOKEN){C.createGooglePhotorealistic3DTileset({maximumScreenSpaceError:small?12:4,cacheBytes:(small?160:768)*1048576,maximumCacheOverflowBytes:(small?48:256)*1048576,preloadFlightDestinations:!small,preloadWhenHidden:false,skipLevelOfDetail:small,cullRequestsWhileMoving:true,dynamicScreenSpaceError:true}).then(ts=>{if(done)return;TS=ts;sc.primitives.add(ts);sc.globe.show=false;}).catch(e=>{console.warn('photoreal tiles',e);sc.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',maximumLevel:19,credit:'Esri, Maxar, Earthstar Geographics'}));});}
   // full device resolution (capped at 2x for frame rate), sharper tiles, HDR, MSAA + FXAA, softer bloom on city light
-  widget.useBrowserRecommendedResolution=false;widget.resolutionScale=Math.min(1,2/(devicePixelRatio||1));
+  widget.useBrowserRecommendedResolution=false;widget.resolutionScale=Math.min(1,(innerWidth<760?1.5:2)/(devicePixelRatio||1));
   sc.globe.maximumScreenSpaceError=1.5;sc.globe.tileCacheSize=300;
   try{sc.highDynamicRange=!TOKEN;}catch(_){}
-  try{sc.msaaSamples=4;}catch(_){}
+  try{sc.msaaSamples=innerWidth<760?1:4;}catch(_){}
   try{sc.postProcessStages.fxaa.enabled=true;}catch(_){}
   try{const bl=sc.postProcessStages.bloom;bl.enabled=!TOKEN;bl.uniforms.glowOnly=false;bl.uniforms.contrast=119;bl.uniforms.brightness=-0.35;bl.uniforms.delta=1.0;bl.uniforms.sigma=2.2;bl.uniforms.stepSize=1.0;}catch(_){}
   try{sc.atmosphere.lightIntensity=12;sc.atmosphere.dynamicLighting=C.DynamicAtmosphereLightingType.SUNLIGHT;}catch(_){}
