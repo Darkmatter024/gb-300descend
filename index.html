@@ -3087,10 +3087,16 @@ function setPanel(n){
 }
 function dest(){return tr?(tr.dir>0?tr.i+1:tr.i):cur;}
 function step(d){autoplay=false;syncPlay();const b=dest();if(d>0&&b===N-1){jump(0);return;}target=Math.max(0,Math.min(N-1,b+d));playSfx();}
-function syncPlay(){$('#play').setAttribute('aria-pressed',String(autoplay));$('#play').textContent=autoplay?'❚❚':'▶';$('#play').setAttribute('aria-label',autoplay?'Pause guided tour':'Start guided tour');}
+function syncPlay(){const b0=$('#play');delete b0.dataset.on;if(window.__GBtour&&window.__GBtour.on()){if(typeof syncTourBtn==='function')syncTourBtn();return;}$('#play').setAttribute('aria-pressed',String(autoplay));$('#play').textContent=autoplay?'❚❚':'▶';$('#play').setAttribute('aria-label',autoplay?'Pause guided tour':'Start guided tour');}
 $('#next').addEventListener('click',()=>step(1));
 $('#prev').addEventListener('click',()=>step(-1));
-$('#play').addEventListener('click',()=>{autoplay=!autoplay;syncPlay();lastRest=performance.now()-3000;});
+$('#play').addEventListener('click',()=>{
+  // ▶ = narrated tour: speaks each level and moves on when the line ends (falls back to the silent auto-advance)
+  const T=window.__GBtour;if(T){if(T.on())T.stop();else{autoplay=false;T.start();}syncTourBtn();return;}
+  autoplay=!autoplay;syncPlay();lastRest=performance.now()-3000;});
+function syncTourBtn(){const T=window.__GBtour;if(!T)return;const on=T.on();const b=$('#play');if(b.dataset.on===String(on))return;b.dataset.on=String(on);
+  b.setAttribute('aria-pressed',String(on));b.textContent=on?'❚❚':'▶';b.setAttribute('aria-label',on?'Stop narrated tour':'Start narrated tour');}
+setInterval(syncTourBtn,400);
 $('#lbl').addEventListener('click',e=>{labelsOn=!labelsOn;e.currentTarget.setAttribute('aria-pressed',String(labelsOn));e.currentTarget.textContent=labelsOn?'Labels on':'Labels off';});
 addEventListener('keydown',e=>{if(e.target.closest&&e.target.closest('button')&&(e.key===' '||e.key==='Enter'))return;if(['ArrowDown','ArrowRight',' ','PageDown'].includes(e.key)){e.preventDefault();step(1);}if(['ArrowUp','ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();step(-1);}});
 let wheelLock=0;
@@ -4369,7 +4375,16 @@ requestAnimationFrame(frame);window.__GBframe=frame;
   const pickVoice=()=>{try{const v=SS.getVoices();voice=v.find(x=>/en-US/i.test(x.lang)&&/Samantha|Google US|Aria|Jenny|Natural/i.test(x.name))||v.find(x=>/^en/i.test(x.lang))||null;}catch(e){}};
   if(SS){pickVoice();try{SS.addEventListener('voiceschanged',pickVoice);}catch(e){}}
   let sayId=0;
-  const AU=new Audio();AU.preload='auto';
+  const AU=new Audio();AU.preload='auto';AU.setAttribute('playsinline','');
+  // iOS only lets a page start sound from a tap. Play a silent blip on this element during the first tap so later,
+  // timer-driven narration (voice tour, auto-advance) is allowed to play. Also prime speech synthesis.
+  let auUnlocked=false;const SIL='data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+  const unlockAudio=()=>{if(auUnlocked)return;auUnlocked=true;
+    try{const keep=AU.src;AU.src=SIL;const p=AU.play();const done=()=>{try{AU.pause();AU.currentTime=0;}catch(e){}};if(p&&p.then)p.then(done,()=>{auUnlocked=false;});else done();}catch(e){auUnlocked=false;}
+    try{if(SS){const u=new SpeechSynthesisUtterance(' ');u.volume=0;SS.speak(u);}}catch(e){}
+    loadAud&&setTimeout(loadAud,0);};
+  ['pointerdown','touchend','click','keydown'].forEach(t=>addEventListener(t,unlockAudio,{capture:true,passive:true}));
+  window.__GBunlockAudio=unlockAudio;
   const VNAME={emma:'Emma \u00b7 British',heart:'Heart \u00b7 American'};
   let vname='heart';try{const v=localStorage.getItem('gb-voice');if(VNAME[v])vname=v;}catch(e){}
   // narration audio: inline (offline file) as inert JSON, or narration.json next to the published page; loaded after first paint
