@@ -4773,7 +4773,8 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const T=window.THREE, small=Math.min(innerWidth,innerHeight)<760, HQ=qs.has('gbhq');   // gbhq: full-quality capture for the phone video
  if(window.__GBsafe&&!HQ)return;
- if(small&&!HQ&&qs.get('gbt')==null){try{phoneVideo();}catch(e){console.warn('earth video',e);}return;}
+ // Phones open straight on the night aerial (the city and the power line): simplest and proven stable. ?earth plays the video.
+ if(small&&!HQ&&qs.get('gbt')==null){if(qs.has('earth')){try{phoneVideo();}catch(e){console.warn('earth video',e);}}return;}
  function phoneVideo(){
   const G=window.__GBglobe={active:true,skip:null};
   const st=document.createElement('style');st.textContent=
