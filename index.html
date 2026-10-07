@@ -1240,6 +1240,7 @@ body .panel #fork button:focus-visible{outline:none!important;border-bottom-colo
 
   <section id="pres" aria-live="polite"><div class="p-top"><span><b id="p-n">01</b> / <span id="p-t">14</span></span><span class="p-bar"><i id="p-bar"></i></span><span id="p-sc"></span></div><h2 id="p-h">The grid</h2><p class="p-say" id="p-say"></p><p class="p-cmp" id="p-cmp"></p><div class="p-keys">← → or clicker to step · P or Esc to exit</div><div class="p-nav"><button type="button" id="p-prev" aria-label="Previous level">↑</button><button type="button" id="p-next" aria-label="Next level">↓</button></div></section><div id="modesMenu" role="menu" hidden>
 <button type="button" role="menuitem" data-m="watt"><b>Where does 1 watt go</b><small>Follow one watt from the grid to the outside air</small></button>
+<button type="button" role="menuitem" data-m="alltour"><b>Full voice tour</b><small>Every path, grid to atom, narrated start to finish (about 10 min)</small></button>
 <button type="button" role="menuitem" data-m="tour"><b>Narrated tour</b><small>Reads each level aloud and moves on by itself</small></button>
 <button type="button" role="menuitem" data-m="present"><b>Presenter mode</b><small>Big captions for a screen share (P)</small></button>
 <div class="mm-sep"></div>
@@ -4422,10 +4423,27 @@ requestAnimationFrame(frame);window.__GBframe=frame;
   /* --- narrated tour: read each level, then move on --- */
   let tour=null;const narr=$('#narr'),narrT=$('#narrT');
   function tourStep(){if(!tour)return;const S=st();
-    say(levelLine(),()=>{if(!tour)return;const S2=st();if(S2.cur>=S2.N-1){stopTour();return;}window.__GBgo(S2.cur+1);
+    say(levelLine(),()=>{if(!tour)return;const S2=st();if(S2.cur>=S2.N-1){if(tour.all){nextPath();return;}stopTour();return;}window.__GBgo(S2.cur+1);
       const wait=()=>{if(!tour)return;const s3=st();if(s3.tr||s3.target!==s3.cur){tour.t=setTimeout(wait,200);return;}tour.t=setTimeout(tourStep,350);};tour.t=setTimeout(wait,300);},'L:'+ttl());}
   function startTour(){stopWatt();if(document.body.classList.contains('prologue')){const sk=$('#skip');if(sk)sk.click();}
     tour={t:0};if(narr){narr.hidden=false;narrT.textContent='Narrated tour';}tourStep();}
+  /* --- full voice tour: the main descent, then back up to the hall and down each of the other paths --- */
+  const ALLP=['compute','data','heat','power','memory','nvlink'];
+  const PNAME={compute:'Compute',data:'Data',heat:'Heat',power:'Power',memory:'Memory',nvlink:'NVLink'};
+  const label=()=>{if(narr&&tour&&tour.all)narrT.textContent='Voice tour · '+PNAME[ALLP[tour.pi]]+' path · '+(tour.pi+1)+' / '+ALLP.length;};
+  const settle=(fn)=>{const w=()=>{if(!tour)return;const s=st();if(s.tr||s.target!==s.cur){tour.t=setTimeout(w,200);return;}tour.t=setTimeout(fn,400);};tour.t=setTimeout(w,250);};
+  function nextPath(){if(!tour)return;tour.pi++;if(tour.pi>=ALLP.length){stopTour();return;}
+    const p=ALLP[tour.pi];label();
+    const s=st();if(s.cur!==3){document.body.classList.remove('pierce');void document.body.offsetWidth;document.body.classList.add('pierce');setTimeout(()=>document.body.classList.remove('pierce'),800);window.__GBjump(3);}
+    settle(()=>{if(!tour)return;try{window.__GBsetPath(p);}catch(_){}
+      settle(()=>{if(!tour)return;window.__GBgo(4);settle(tourStep);});});}
+  function startAll(){stopWatt();if(document.body.classList.contains('prologue')){const sk=$('#skip');if(sk)sk.click();}
+    if(window.__GBhallTour&&window.__GBhallTour.on())window.__GBhallTour.stop();
+    tour={t:0,all:true,pi:0};if(narr)narr.hidden=false;label();
+    const go=()=>{if(!tour)return;const s=st();if(s.cur>3||s.tr)window.__GBjump(3);
+      settle(()=>{if(!tour)return;try{window.__GBsetPath('compute');}catch(_){}window.__GBjump(0);settle(tourStep);});};
+    setTimeout(go,document.body.classList.contains('prologue')?1600:50);}
+  window.__GBallTour=startAll;
   function stopTour(){if(!tour)return;clearTimeout(tour.t);tour=null;hush();if(narr)narr.hidden=true;}
   window.__GBtour={start:startTour,stop:stopTour,on:()=>!!tour};
   const stopBtn=$('#narrStop');if(stopBtn)stopBtn.addEventListener('click',e=>{e.stopPropagation();stopTour();});
@@ -4442,6 +4460,7 @@ requestAnimationFrame(frame);window.__GBframe=frame;
   if(mm)mm.addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;e.stopPropagation();const m=b.dataset.m;
     if(m==='watt'){openM(false);startWatt();}
     else if(m==='tour'){openM(false);startTour();}
+    else if(m==='alltour'){openM(false);startAll();}
     else if(m==='present'){openM(false);if(window.__GBpresent)window.__GBpresent(true);}
     else if(m==='voice'){voiceOn=!voiceOn;if(!voiceOn)hush();else say(levelLine(),null,'L:'+ttl());sync();}
     else if(m==='narrator'){vname=vname==='emma'?'heart':'emma';try{localStorage.setItem('gb-voice',vname);}catch(e){}sync();say(levelLine(),null,'L:'+ttl());}
