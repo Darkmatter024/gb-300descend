@@ -3822,6 +3822,7 @@ requestAnimationFrame(frame);window.__GBframe=frame;
     if(phase==='done')return;
     raf=requestAnimationFrame(loop);
     const p=Math.min(1,(now-t0)/PAN_MS);
+    if(phase==='open'&&window.__GBglobe&&window.__GBglobe.active){t0=now;}
     if(phase==='open')place(p);
     if(phase==='fade'){const u=Math.min(1,(now-tGo)/SETTLE_MS);place(pAt+(1-pAt)*ease(u));if(u>=1)dive(now);}
     if(phase==='dive'){
@@ -3846,7 +3847,7 @@ requestAnimationFrame(frame);window.__GBframe=frame;
   function hideIntro(){intro.classList.add('gone');intro.setAttribute('aria-hidden','true');after(900,()=>{intro.style.display='none';});}
 
   function startDescent(){
-    if(phase!=='open')return;pAt=Math.min(1,(performance.now()-t0)/PAN_MS);tGo=performance.now();phase='fade';
+    if(phase!=='open')return;if(window.__GBglobe&&window.__GBglobe.active&&window.__GBglobe.skip)window.__GBglobe.skip();pAt=Math.min(1,(performance.now()-t0)/PAN_MS);tGo=performance.now();phase='fade';
     hideIntro();document.body.classList.add('running');
     if(!window.__GBstate){finish(true);return;}            // no 3D engine (fallback mode): just open the hall
     // the building is placed and drawn under the photo now, so the cut costs nothing
@@ -3863,7 +3864,7 @@ requestAnimationFrame(frame);window.__GBframe=frame;
     if(jumped&&window.__GBjump)window.__GBjump(3);
   }
   function skipAll(){
-    if(phase==='done')return;cancelled=true;timers.forEach(clearTimeout);timers.forEach(clearInterval);timers=[];
+    if(phase==='done')return;if(window.__GBglobe&&window.__GBglobe.active&&window.__GBglobe.skip)window.__GBglobe.skip();cancelled=true;timers.forEach(clearTimeout);timers.forEach(clearInterval);timers=[];
     hideIntro();window.__GB_DUR=null;if(window.__GBjump)window.__GBjump(3);
     pro.classList.add('out');cancelled=false;finish(false);
     setTimeout(()=>{if(document.body.classList.contains('prologue')||!pro.hidden){finish(false);}},1000);
@@ -4586,4 +4587,73 @@ try{(function(){
  const loop=(now)=>{const t=(performance.now()-t0)/1000;const k=window.__GBbdK||0;leds.visible=k<0.98;
   if(g.visible&&leds.visible&&t-last>0.05){last=t;blink(t);}lm.opacity=1-k;requestAnimationFrame(loop);};
  loop();
-}catch(e){console.warn('hall realism',e)}})();</script></body></html>
+}catch(e){console.warn('hall realism',e)}})();</script><script>
+/* ===== Orbit opening: real Earth from space down to Data Center Alley (Ashburn, VA) =====
+ * CesiumJS from the CDN. With a Cesium ion token (GB_ION_TOKEN below, or ?ion=TOKEN in the URL) the
+ * landing is Google Photorealistic 3D; without one it is keyless Esri satellite imagery on the globe.
+ * Anything going wrong (no WebGL, CDN unreachable, slow load, reduced motion) simply skips it and the
+ * aerial-photo opening plays exactly as before. */
+(function(){try{
+ const GB_ION_TOKEN='';                        // paste a Cesium ion token here (restrict it to your github.io URL in ion)
+ const BASE=window.__GB_CESIUM_BASE||'https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/';
+ const qs=new URLSearchParams(location.search);
+ const TOKEN=qs.get('ion')||GB_ION_TOKEN;
+ const body=document.body, app=document.getElementById('app'), pro=document.getElementById('prologue');
+ if(!pro||!app||!body.classList.contains('prologue')||body.classList.contains('lite-mode'))return;
+ if(qs.has('noglobe')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ try{const c=document.createElement('canvas');if(!(c.getContext('webgl2')||c.getContext('webgl')))return;}catch(_){return;}
+ const G=window.__GBglobe={active:true,skip:null};
+ const st=document.createElement('style');st.textContent=
+  '#globe{position:absolute;inset:0;z-index:21;background:#000;opacity:1;transition:opacity 1.1s ease}#globe.out{opacity:0;pointer-events:none}'+
+  '#globe .gv{position:absolute;inset:0}#globe .gv canvas{display:block;width:100%;height:100%}'+
+  '#globe .gcap{position:absolute;left:50%;top:calc(18% + env(safe-area-inset-top,0px));transform:translateX(-50%);text-align:center;font:500 10px/1.7 var(--mono,monospace);letter-spacing:.24em;color:#cfe6ff;text-transform:uppercase;text-shadow:0 1px 12px rgba(0,0,0,.8);opacity:0;transition:opacity .8s ease;pointer-events:none;white-space:nowrap}'+
+  '#globe .gcap b{display:block;font:600 13px/1.4 var(--mono,monospace);letter-spacing:.2em;color:#fff}#globe .gcap.on{opacity:1}'+
+  '#globe .gcred{position:absolute;right:10px;top:calc(56px + env(safe-area-inset-top,0px));max-width:60vw;font:400 9px/1.3 sans-serif;color:rgba(255,255,255,.75);text-align:right;z-index:2}'+
+  '#globe .gcred img{max-height:14px;vertical-align:middle}#globe .gcred a{color:inherit}'+
+  '#globe .cesium-widget-credits,#globe .cesium-credit-lightbox-overlay{display:none!important}';
+ document.head.appendChild(st);
+ const wrap=document.createElement('div');wrap.id='globe';wrap.setAttribute('aria-hidden','true');
+ wrap.innerHTML='<div class="gv"></div><div class="gcap"><b>Data Center Alley</b><span>Ashburn, Virginia</span><br><span class="galt">Altitude —</span></div><div class="gcred"></div>';
+ pro.insertAdjacentElement('afterend',wrap);
+ let widget=null,done=false,timers=[];
+ const release=(fast)=>{if(done)return;done=true;G.active=false;timers.forEach(clearTimeout);
+   wrap.style.transition=fast?'opacity .35s ease':'';wrap.classList.add('out');
+   setTimeout(()=>{try{widget&&widget.destroy();}catch(_){}wrap.remove();},fast?450:1300);
+   dispatchEvent(new Event('gbglobedone'));};
+ G.skip=()=>release(true);
+ timers.push(setTimeout(()=>{if(!window.Cesium)release(true);},6000));   // CDN too slow or blocked: keep the classic opening
+ window.CESIUM_BASE_URL=BASE;
+ const css=document.createElement('link');css.rel='stylesheet';css.href=BASE+'Widgets/widgets.css';document.head.appendChild(css);
+ const s=document.createElement('script');s.src=BASE+'Cesium.js';s.async=true;s.onerror=()=>release(true);
+ s.onload=()=>{if(done)return;try{start();}catch(e){console.warn('globe',e);release(true);}};
+ document.head.appendChild(s);
+ function start(){
+  const C=window.Cesium;if(TOKEN)C.Ion.defaultAccessToken=TOKEN;
+  const cred=wrap.querySelector('.gcred');
+  const baseLayer=TOKEN?false:C.ImageryLayer.fromProviderAsync(C.ArcGisMapServerImageryProvider.fromUrl('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer'));
+  widget=new C.CesiumWidget(wrap.querySelector('.gv'),{baseLayer,creditContainer:cred,shouldAnimate:true,requestRenderMode:false,
+    skyBox:new C.SkyBox({sources:{positiveX:BASE+'Assets/Textures/SkyBox/tycho2t3_80_px.jpg',negativeX:BASE+'Assets/Textures/SkyBox/tycho2t3_80_mx.jpg',positiveY:BASE+'Assets/Textures/SkyBox/tycho2t3_80_py.jpg',negativeY:BASE+'Assets/Textures/SkyBox/tycho2t3_80_my.jpg',positiveZ:BASE+'Assets/Textures/SkyBox/tycho2t3_80_pz.jpg',negativeZ:BASE+'Assets/Textures/SkyBox/tycho2t3_80_mz.jpg'}})});
+  const sc=widget.scene,cam=widget.camera;
+  sc.screenSpaceCameraController.enableInputs=false;
+  sc.globe.enableLighting=true;sc.globe.showGroundAtmosphere=true;sc.fog.enabled=true;
+  sc.globe.baseColor=C.Color.fromCssColorString('#06121f');
+  // late-day light over the US East coast: the landing reads as dusk, which hands off cleanly to the night aerial
+  widget.clock.currentTime=C.JulianDate.fromIso8601('2026-06-21T23:10:00Z');widget.clock.shouldAnimate=false;
+  if(TOKEN){C.createGooglePhotorealistic3DTileset().then(ts=>{if(done)return;sc.primitives.add(ts);sc.globe.show=false;}).catch(()=>{});}
+  if(innerWidth<760)widget.resolutionScale=Math.min(1,1.6/(devicePixelRatio||1));
+  cam.setView({destination:C.Cartesian3.fromDegrees(-48,24,21000000)});
+  const cap=wrap.querySelector('.gcap'),alt=wrap.querySelector('.galt');
+  const fmt=h=>h>=10000?Math.round(h/1000).toLocaleString()+' km':Math.round(h).toLocaleString()+' m';
+  let spin=true;sc.preRender.addEventListener(()=>{if(spin)cam.rotate(C.Cartesian3.UNIT_Z,-0.0009);
+    const h=cam.positionCartographic.height;alt.textContent='Altitude '+fmt(h);});
+  timers.push(setTimeout(()=>{if(done)return;spin=false;cap.classList.add('on');
+    cam.flyTo({destination:C.Cartesian3.fromDegrees(-77.462,38.978,TOKEN?900:1600),
+      orientation:{heading:C.Math.toRadians(345),pitch:C.Math.toRadians(TOKEN?-28:-42),roll:0},
+      duration:7.5,easingFunction:C.EasingFunction.QUINTIC_IN_OUT,
+      complete:()=>{timers.push(setTimeout(()=>{cap.classList.remove('on');release(false);},1400));}});},1400));
+  timers.push(setTimeout(()=>release(false),16000));                    // never hold the opening longer than this
+ }
+}catch(e){try{console.warn('orbit opening disabled',e);}catch(_){}
+  try{if(window.__GBglobe){window.__GBglobe.active=false;}const g=document.getElementById('globe');g&&g.remove();}catch(_){}}})();
+</script>
+</body></html>
