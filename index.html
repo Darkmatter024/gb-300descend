@@ -4639,17 +4639,29 @@ try{(function(){
   sc.globe.baseColor=C.Color.fromCssColorString('#06121f');
   // late-day light over the US East coast: the landing reads as dusk, which hands off cleanly to the night aerial
   widget.clock.currentTime=C.JulianDate.fromIso8601('2026-06-21T23:10:00Z');widget.clock.shouldAnimate=false;
-  if(TOKEN){C.createGooglePhotorealistic3DTileset({maximumScreenSpaceError:8}).then(ts=>{if(done)return;sc.primitives.add(ts);sc.globe.show=false;}).catch(e=>{console.warn('photoreal tiles',e);sc.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',maximumLevel:19,credit:'Esri, Maxar, Earthstar Geographics'}));});}
+  let TS=null;const small=innerWidth<760;
+  if(TOKEN){C.createGooglePhotorealistic3DTileset({maximumScreenSpaceError:small?6:3,cacheBytes:(small?384:1024)*1048576,maximumCacheOverflowBytes:(small?256:512)*1048576,preloadFlightDestinations:true}).then(ts=>{if(done)return;TS=ts;sc.primitives.add(ts);sc.globe.show=false;}).catch(e=>{console.warn('photoreal tiles',e);sc.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({url:'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',maximumLevel:19,credit:'Esri, Maxar, Earthstar Geographics'}));});}
   // full device resolution (capped at 2x for frame rate), sharper tiles, HDR, MSAA + FXAA, softer bloom on city light
   widget.useBrowserRecommendedResolution=false;widget.resolutionScale=Math.min(1,2/(devicePixelRatio||1));
   sc.globe.maximumScreenSpaceError=1.5;sc.globe.tileCacheSize=300;
-  try{sc.highDynamicRange=true;}catch(_){}
+  try{sc.highDynamicRange=!TOKEN;}catch(_){}
   try{sc.msaaSamples=4;}catch(_){}
   try{sc.postProcessStages.fxaa.enabled=true;}catch(_){}
-  try{const bl=sc.postProcessStages.bloom;bl.enabled=true;bl.uniforms.glowOnly=false;bl.uniforms.contrast=119;bl.uniforms.brightness=-0.35;bl.uniforms.delta=1.0;bl.uniforms.sigma=2.2;bl.uniforms.stepSize=1.0;}catch(_){}
+  try{const bl=sc.postProcessStages.bloom;bl.enabled=!TOKEN;bl.uniforms.glowOnly=false;bl.uniforms.contrast=119;bl.uniforms.brightness=-0.35;bl.uniforms.delta=1.0;bl.uniforms.sigma=2.2;bl.uniforms.stepSize=1.0;}catch(_){}
   try{sc.atmosphere.lightIntensity=12;sc.atmosphere.dynamicLighting=C.DynamicAtmosphereLightingType.SUNLIGHT;}catch(_){}
   try{sc.skyAtmosphere.atmosphereLightIntensity=12;sc.skyAtmosphere.hueShift=-0.02;sc.skyAtmosphere.saturationShift=0.1;}catch(_){}
   sc.globe.atmosphereLightIntensity=12;sc.globe.dynamicAtmosphereLighting=true;sc.globe.dynamicAtmosphereLightingFromSun=true;
+  if(TOKEN){try{const grade=new C.PostProcessStage({name:'gbGrade',fragmentShader:`
+uniform sampler2D colorTexture;uniform sampler2D depthTexture;uniform float hazeK;in vec2 v_textureCoordinates;
+void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDepth(depthTexture,v_textureCoordinates);
+ vec3 col=c.rgb;
+ if(d<1.0&&hazeK>0.0){vec4 ec=czm_windowToEyeCoordinates(gl_FragCoord.xy,d);float dist=length(ec.xyz/ec.w);
+  float hz=clamp(1.0-exp(-dist*0.00016),0.0,0.6)*hazeK;col=mix(col,vec3(0.66,0.73,0.82),hz);}
+ float l=dot(col,vec3(0.2126,0.7152,0.0722));col=mix(vec3(l),col,1.1);col=(col-0.5)*1.07+0.5;
+ vec2 uv=v_textureCoordinates-0.5;col*=1.0-0.42*dot(uv,uv);
+ out_FragColor=vec4(clamp(col,0.0,1.0),c.a);}`,
+   uniforms:{hazeK:()=>{const h=cam.positionCartographic.height;return h<60000?Math.min(1,(60000-h)/40000):0;}}});
+   sc.postProcessStages.add(grade);}catch(e){console.warn('grade',e);}}
   sc.globe.nightFadeOutDistance=1.2e7;sc.globe.nightFadeInDistance=5e7;
   cam.setView({destination:C.Cartesian3.fromDegrees(-48,24,21000000)});
   const cap=wrap.querySelector('.gcap'),alt=wrap.querySelector('.galt');
@@ -4657,12 +4669,20 @@ try{(function(){
   let spin=true;sc.preRender.addEventListener(()=>{if(spin)cam.rotate(C.Cartesian3.UNIT_Z,-0.0009);
     const h=cam.positionCartographic.height;alt.textContent='Altitude '+fmt(h);});
   timers.push(setTimeout(()=>{if(done)return;spin=false;cap.classList.add('on');
-    cam.flyTo({destination:TOKEN?C.Cartesian3.fromDegrees(-77.4655,39.0035,520):C.Cartesian3.fromDegrees(-77.462,38.978,1600),
-      orientation:{heading:C.Math.toRadians(TOKEN?12:345),pitch:C.Math.toRadians(TOKEN?-24:-42),roll:0},
+    cam.flyTo({destination:TOKEN?C.Cartesian3.fromDegrees(-77.4668,38.9978,1350):C.Cartesian3.fromDegrees(-77.462,38.978,1600),
+      orientation:{heading:C.Math.toRadians(TOKEN?18:345),pitch:C.Math.toRadians(TOKEN?-31:-42),roll:0},
       duration:TOKEN?9:7.5,easingFunction:C.EasingFunction.QUINTIC_IN_OUT,
-      complete:()=>{if(TOKEN)cam.flyTo({destination:C.Cartesian3.fromDegrees(-77.4642,39.0088,430),orientation:{heading:C.Math.toRadians(20),pitch:C.Math.toRadians(-20),roll:0},duration:3.2,easingFunction:C.EasingFunction.SINUSOIDAL_IN_OUT});
-        timers.push(setTimeout(()=>{cap.classList.remove('on');release(false);},TOKEN?3000:1400));}});},1400));
-  timers.push(setTimeout(()=>release(false),TOKEN?20000:16000));                    // never hold the opening longer than this
+      complete:()=>{
+        if(!TOKEN){timers.push(setTimeout(()=>{cap.classList.remove('on');release(false);},1400));return;}
+        // slow cinematic arc around the campus centre, then hand off once the sharp tiles are in (or after 5 s)
+        const tgt=C.Cartesian3.fromDegrees(-77.4585,39.0165,80);const t0=performance.now();let h0=null,r0=null,p0=null;
+        const arc=sc.preRender.addEventListener(()=>{if(done){arc();return;}
+          if(h0===null){const off=C.Cartesian3.subtract(cam.positionWC,tgt,new C.Cartesian3());r0=C.Cartesian3.magnitude(off);h0=cam.heading;p0=cam.pitch;}
+          const u=(performance.now()-t0)/1000;cam.lookAt(tgt,new C.HeadingPitchRange(h0+C.Math.toRadians(4.5*u),p0,r0));});
+        const t1=performance.now();
+        const check=()=>{if(done)return;const ok=!TS||TS.tilesLoaded;if((ok&&performance.now()-t1>3200)||performance.now()-t1>5200){arc();cam.lookAtTransform(C.Matrix4.IDENTITY);cap.classList.remove('on');release(false);}else timers.push(setTimeout(check,200));};
+        timers.push(setTimeout(check,200));}});},1400));
+  timers.push(setTimeout(()=>release(false),TOKEN?22000:16000));                    // never hold the opening longer than this
  }
 }catch(e){try{console.warn('orbit opening disabled',e);}catch(_){}
   try{if(window.__GBglobe){window.__GBglobe.active=false;}const g=document.getElementById('globe');g&&g.remove();}catch(_){}}})();
