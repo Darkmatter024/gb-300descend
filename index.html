@@ -4784,7 +4784,7 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
    '#globe .gcred{position:absolute;right:12px;top:calc(60px + env(safe-area-inset-top,0px));font:400 9px/1.3 var(--body,sans-serif);color:rgba(255,255,255,.45)}';
   document.head.appendChild(st);
   const wrap=document.createElement('div');wrap.id='globe';wrap.setAttribute('aria-hidden','true');
-  wrap.innerHTML='<video muted playsinline autoplay preload="auto" poster="assets/earth/flight_poster.jpg" src="assets/earth/flight.mp4"></video><div class="gcap"><b>Data Center Alley</b><span>Ashburn, Virginia</span><br><span class="galt">Altitude 21,024 km</span></div><div class="gcred">Imagery: NASA</div>';
+  wrap.innerHTML='<video muted playsinline autoplay preload="auto" poster="assets/earth/flight_poster.jpg"><source src="assets/earth/flight.mp4" type="video/mp4"><source src="assets/earth/flight.webm" type="video/webm"></video><div class="gcap"><b>Data Center Alley</b><span>Ashburn, Virginia</span><br><span class="galt">Altitude 21,024 km</span></div><div class="gcred">Imagery: NASA</div>';
   pro.insertAdjacentElement('afterend',wrap);
   const v=wrap.querySelector('video'),cap=wrap.querySelector('.gcap'),alt=wrap.querySelector('.galt');v.muted=true;
   let done=false,ALTS=null,raf=0;const timers=[];
@@ -4798,7 +4798,7 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
     if(t>2.0)cap.classList.add('on');if(t>v.duration-1.0)cap.classList.remove('on');};
   v.addEventListener('playing',()=>{cancelAnimationFrame(raf);tick();},{once:true});
   v.addEventListener('ended',()=>timers.push(setTimeout(()=>release(false),500)));
-  v.addEventListener('error',()=>release(true));
+  v.addEventListener('error',()=>release(true));const srcs=v.querySelectorAll('source');if(srcs.length)srcs[srcs.length-1].addEventListener('error',()=>release(true));
   const tryPlay=()=>{try{const p=v.play();if(p&&p.catch)p.catch(()=>{});}catch(_){}};tryPlay();
   timers.push(setTimeout(()=>{if(!(v.currentTime>0))release(true);},4500));   // autoplay blocked (e.g. Low Power Mode) or slow: classic opening
   timers.push(setTimeout(()=>release(false),18000));
