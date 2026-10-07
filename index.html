@@ -1131,6 +1131,12 @@ body .panel #fork button:focus-visible{outline:none!important;border-bottom-colo
 }
 </style>
 </head><body>
+<script>(function(){try{var k='gbAlive',p=localStorage.getItem(k),now=Date.now();
+  window.__GBsafe=!!(p&&now-(+p)<15*60*1000)||/[?&]safe\b/.test(location.search);
+  localStorage.setItem(k,String(now));
+  var clear=function(){try{localStorage.removeItem(k);}catch(e){}};
+  addEventListener('pagehide',clear);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')clear();else{try{localStorage.setItem(k,String(Date.now()));}catch(e){}}});
+}catch(e){window.__GBsafe=false;}})();</script>
 <input id="enter-toggle" type="checkbox" aria-hidden="true" tabindex="-1">
 <div id="app">
   <canvas id="c" aria-label="Interactive three-dimensional descent from the power grid to a silicon atom"></canvas>
@@ -1462,7 +1468,7 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=0.4;
 renderer.physicallyCorrectLights=false;
 let qualityHigh=window.innerWidth>900;
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,qualityHigh?1.7:1.25));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.__GBsafe?1:(qualityHigh?1.7:1.25)));
 const scene=new THREE.Scene();
 scene.background=new THREE.Color('#060d17');
 scene.fog=new THREE.FogExp2(0x09131c,0.006);
@@ -4765,7 +4771,38 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
  if(qs.has('photoreal')||qs.has('noglobe'))return;
  if(!window.THREE||!pro||!app||!body.classList.contains('prologue')||body.classList.contains('lite-mode'))return;
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
- const T=window.THREE, small=Math.min(innerWidth,innerHeight)<760;
+ const T=window.THREE, small=Math.min(innerWidth,innerHeight)<760, HQ=qs.has('gbhq');   // gbhq: full-quality capture for the phone video
+ if(window.__GBsafe&&!HQ)return;
+ if(small&&!HQ&&qs.get('gbt')==null){try{phoneVideo();}catch(e){console.warn('earth video',e);}return;}
+ function phoneVideo(){
+  const G=window.__GBglobe={active:true,skip:null};
+  const st=document.createElement('style');st.textContent=
+   '#globe{position:absolute;inset:0;z-index:21;background:#01030a;opacity:1;transition:opacity 1.2s ease}#globe.out{opacity:0;pointer-events:none}'+
+   '#globe video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;background:#01030a}'+
+   '#globe .gcap{position:absolute;left:50%;top:calc(17% + env(safe-area-inset-top,0px));transform:translateX(-50%);text-align:center;font:500 10px/1.8 var(--mono,monospace);letter-spacing:.26em;color:#cfe6ff;text-transform:uppercase;text-shadow:0 1px 14px rgba(0,0,0,.9);opacity:0;transition:opacity .9s ease;pointer-events:none;white-space:nowrap}'+
+   '#globe .gcap b{display:block;font:600 13px/1.5 var(--mono,monospace);letter-spacing:.22em;color:#fff}#globe .gcap.on{opacity:1}'+
+   '#globe .gcred{position:absolute;right:12px;top:calc(60px + env(safe-area-inset-top,0px));font:400 9px/1.3 var(--body,sans-serif);color:rgba(255,255,255,.45)}';
+  document.head.appendChild(st);
+  const wrap=document.createElement('div');wrap.id='globe';wrap.setAttribute('aria-hidden','true');
+  wrap.innerHTML='<video muted playsinline autoplay preload="auto" poster="assets/earth/flight_poster.jpg" src="assets/earth/flight.mp4"></video><div class="gcap"><b>Data Center Alley</b><span>Ashburn, Virginia</span><br><span class="galt">Altitude 21,024 km</span></div><div class="gcred">Imagery: NASA</div>';
+  pro.insertAdjacentElement('afterend',wrap);
+  const v=wrap.querySelector('video'),cap=wrap.querySelector('.gcap'),alt=wrap.querySelector('.galt');v.muted=true;
+  let done=false,ALTS=null,raf=0;const timers=[];
+  fetch('assets/earth/flight_alts.json').then(r=>r.json()).then(a=>{ALTS=a;}).catch(()=>{});
+  const release=(fast)=>{if(done)return;done=true;G.active=false;timers.forEach(clearTimeout);cancelAnimationFrame(raf);
+    wrap.style.transition=fast?'opacity .35s ease':'';wrap.classList.add('out');
+    setTimeout(()=>{try{v.pause();v.removeAttribute('src');v.load();}catch(_){}wrap.remove();},fast?450:1400);dispatchEvent(new Event('gbglobedone'));};
+  G.skip=()=>release(true);
+  const tick=()=>{if(done)return;raf=requestAnimationFrame(tick);const t=v.currentTime||0;
+    if(ALTS){const i=Math.min(ALTS.length-1,Math.round(t*15));alt.textContent='Altitude '+ALTS[i];}
+    if(t>2.0)cap.classList.add('on');if(t>v.duration-1.0)cap.classList.remove('on');};
+  v.addEventListener('playing',()=>{cancelAnimationFrame(raf);tick();},{once:true});
+  v.addEventListener('ended',()=>timers.push(setTimeout(()=>release(false),500)));
+  v.addEventListener('error',()=>release(true));
+  const tryPlay=()=>{try{const p=v.play();if(p&&p.catch)p.catch(()=>{});}catch(_){}};tryPlay();
+  timers.push(setTimeout(()=>{if(!(v.currentTime>0))release(true);},4500));   // autoplay blocked (e.g. Low Power Mode) or slow: classic opening
+  timers.push(setTimeout(()=>release(false),18000));
+ }
  const ss=(v)=>{try{if(v===undefined)return localStorage.getItem('gbEarthRun')||sessionStorage.getItem('gbEarthRun');
    if(v===null){localStorage.removeItem('gbEarthRun');sessionStorage.removeItem('gbEarthRun');}else{localStorage.setItem('gbEarthRun',v);sessionStorage.setItem('gbEarthRun',v);}}catch(_){return null;}};
  {const pv=ss();if(pv&&Date.now()-(+pv)<30*60*1000){ss(null);return;}}
@@ -4789,8 +4826,8 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
    setTimeout(()=>{try{texs.forEach(t=>t.dispose());renderer&&renderer.dispose();renderer&&renderer.forceContextLoss&&renderer.forceContextLoss();}catch(_){}wrap.remove();},fast?450:1400);
    dispatchEvent(new Event('gbglobedone'));};
  G.skip=()=>release(true);
- try{renderer=new T.WebGLRenderer({canvas:cv,antialias:!small,alpha:false,powerPreference:'high-performance'});}catch(e){release(true);return;}
- const DPR=Math.min(devicePixelRatio||1,small?1.5:2);renderer.setPixelRatio(DPR);renderer.setClearColor(0x01030a,1);
+ try{renderer=new T.WebGLRenderer({canvas:cv,antialias:!small||HQ,alpha:false,powerPreference:'high-performance'});}catch(e){release(true);return;}
+ const DPR=Math.min(devicePixelRatio||1,small&&!HQ?1.5:2);renderer.setPixelRatio(DPR);renderer.setClearColor(0x01030a,1);
  const scene=new T.Scene(),cam=new T.PerspectiveCamera(small?42:34,1,0.001,100);
  const size=()=>{const w=wrap.clientWidth||innerWidth,h=wrap.clientHeight||innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();};
  size();addEventListener('resize',size);
@@ -4803,7 +4840,7 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
  const ld=(f,srgb)=>new Promise((res,rej)=>{L.load(base+f,t=>{t.anisotropy=small?1:Math.min(8,renderer.capabilities.getMaxAnisotropy());if(srgb&&T.sRGBEncoding)t.encoding=T.sRGBEncoding;texs.push(t);res(t);},undefined,rej);});
  timers.push(setTimeout(()=>{if(!started)release(true);},7000));
  let started=false;
- Promise.all(small?[ld('day_2k.jpg'),ld('night_2k.jpg'),ld('water_1k.jpg'),ld('clouds_1k.jpg'),ld('topo_1k.jpg')]:[ld('day.jpg'),ld('night.jpg'),ld('water.jpg'),ld('clouds.jpg'),ld('topo.jpg')]).then(([day,night,water,clouds,topo])=>{if(done)return;started=true;build(day,night,water,clouds,topo);}).catch(()=>release(true));
+ Promise.all(small&&!HQ?[ld('day_2k.jpg'),ld('night_2k.jpg'),ld('water_1k.jpg'),ld('clouds_1k.jpg'),ld('topo_1k.jpg')]:[ld('day.jpg'),ld('night.jpg'),ld('water.jpg'),ld('clouds.jpg'),ld('topo.jpg')]).then(([day,night,water,clouds,topo])=>{if(done)return;started=true;build(day,night,water,clouds,topo);}).catch(()=>release(true));
  function build(day,night,water,clouds,topo){
   const R=1;
   const NS=small?'2.0':'1.0';
@@ -4859,7 +4896,7 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
   const HOLD=1.6,FLY=8.4,END=HOLD+FLY;const t0=performance.now();let capOn=false,flashed=false;
   const Y=new T.Vector3(0,1,0);
   const frame=()=>{if(done)return;raf=requestAnimationFrame(frame);
-   const FZ=qs.get('gbt');const t=FZ!=null?+FZ:(performance.now()-t0)/1000;earthM.uniforms.cloudShift.value=cloudM.uniforms.cloudShift.value=t*0.0009;
+   const FZ=window.__GBearthT!=null?String(window.__GBearthT):qs.get('gbt');const t=FZ!=null?+FZ:(performance.now()-t0)/1000;earthM.uniforms.cloudShift.value=cloudM.uniforms.cloudShift.value=t*0.0009;
    let dir,dist,look;
    const a0=Math.min(t,HOLD)*0.03;const ds=d0.clone().applyAxisAngle(Y,-a0);
    if(t<HOLD){dir=ds;dist=D0;look=new T.Vector3();}
