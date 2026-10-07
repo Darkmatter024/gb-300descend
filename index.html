@@ -3110,7 +3110,7 @@ addEventListener('wheel',e=>{if(e.target.closest&&e.target.closest('.panel'))ret
 
 let yaw=0,pitch=0,drag=null;
 canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY};try{canvas.setPointerCapture(e.pointerId);}catch(_){}});
-canvas.addEventListener('pointermove',e=>{if(!drag)return;yaw-=(e.clientX-drag.x)*0.006;pitch=Math.max(-0.5,Math.min(0.4,pitch+(e.clientY-drag.y)*0.004));drag.x=e.clientX;drag.y=e.clientY;});
+canvas.addEventListener('pointermove',e=>{if(!drag)return;if(cur===3&&!tr&&(window.__GBbdK||0)>0.02){drag.x=e.clientX;drag.y=e.clientY;return;}yaw-=(e.clientX-drag.x)*0.006;pitch=Math.max(-0.5,Math.min(0.4,pitch+(e.clientY-drag.y)*0.004));drag.x=e.clientX;drag.y=e.clientY;});
 const endDrag=(e)=>{if(drag&&innerWidth<781&&e&&Math.abs(e.clientY-drag.startY)>95&&Math.abs(e.clientY-drag.startY)>Math.abs(e.clientX-drag.startX)*1.3){step(e.clientY<drag.startY?1:-1);yaw=0;pitch=0;}drag=null;};canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',endDrag);
 
 /* ---------- zoom math ---------- */
@@ -3534,7 +3534,7 @@ try{(function(){
  const old=H.tick;
  H.tick=t=>{if(old)old(t);ticks.forEach(k=>k(t));
    const p=window.__GBpathName||'compute';
-   if(p!==lastPath){if(lastPath!==null){punch=1;if(cur===3&&!tr)yaw+=0.12;}lastPath=p;}
+   if(p!==lastPath){if(lastPath!==null){punch=1;}lastPath=p;}
    punch*=Math.exp(-Math.min(0.25,Math.max(0,t-(H._pt||t)))*3);H._pt=t;
    const _dt=Math.min(0.25,Math.max(0,t-(H._lt||t)));H._lt=t;const _k=1-Math.exp(-_dt*5);
    Object.keys(lv).forEach(k=>{lv[k]+=((k===p?1:0)-lv[k])*_k;});
@@ -3571,20 +3571,21 @@ try{(function(){
  const tex={},ready={};
  const want=m=>{if(!m||tex[m])return;const im=new Image();const t=new THREE.Texture(im);t.minFilter=THREE.LinearFilter;t.magFilter=THREE.LinearFilter;t.generateMipmaps=false;
    t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;tex[m]=t;im.onload=()=>{t.needsUpdate=true;ready[m]=true;};im.src=data[m];};
- const mat=new THREE.ShaderMaterial({uniforms:{map:{value:null},k:{value:0},sx:{value:1},oy:{value:0}},
-   vertexShader:'uniform float sx,oy;varying vec2 vU;void main(){vU=vec2(0.5+0.5*position.x*sx,0.5+0.5*position.y-oy);gl_Position=vec4(position.xy,0.0,1.0);}',
+ const mat=new THREE.ShaderMaterial({uniforms:{map:{value:null},k:{value:0},sx:{value:1},sy:{value:1},oy:{value:0}},
+   vertexShader:'uniform float sx,sy,oy;varying vec2 vU;void main(){vU=vec2(0.5+0.5*position.x*sx,0.5+0.5*position.y*sy-oy);gl_Position=vec4(position.xy,0.0,1.0);}',
    fragmentShader:'uniform sampler2D map;uniform float k;varying vec2 vU;void main(){gl_FragColor=vec4(texture2D(map,vU).rgb,k);}',
    transparent:true,depthTest:false,depthWrite:false,fog:false});
  const quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),mat);quad.frustumCulled=false;const bdScene=new THREE.Scene();bdScene.add(quad);
  const mode=()=>{const w=innerWidth,h=innerHeight,a=w/h;if(window.__GBxr||window.__GBnoBd)return null;
-   if(w<760&&a<=IA.phone+0.002)return 'phone';if(w>=760&&a>=1.15&&a<=IA.desk+0.002)return 'desk';return null;};
+   return a<1?'phone':'desk';};
  let M=null;const base=HS.cam;
  let shot=null,live=HS.cam;
  const fit=()=>{live=HS.cam&&HS.cam!==shotRef?HS.cam:live;M=mode();want(M);
    if(!M){shot=null;HS.cam=live;return;}const c=CAMS[M],a=innerWidth/innerHeight,mul=a<1?Math.min(1.9,1/Math.pow(a,0.75)):1;
    const e=c.eff,t=c.tgt;shot={pos:[t[0]+(e[0]-t[0])/mul,t[1]+(e[1]-t[1])/mul,t[2]+(e[2]-t[2])/mul],tgt:t.slice()};
    shotRef={pos:shot.pos.slice(),tgt:shot.tgt.slice()};HS.cam=shotRef;
-   mat.uniforms.sx.value=a/IA[M];mat.uniforms.oy.value=M==='phone'?0.15:0;};
+   const r=a/IA[M];mat.uniforms.sx.value=Math.min(1,r);mat.uniforms.sy.value=Math.min(1,1/r);
+   mat.uniforms.oy.value=M==='phone'?Math.min(0.15,(1-mat.uniforms.sy.value)/2+0.15*mat.uniforms.sy.value):0;};
  let shotRef=null;
  addEventListener('resize',fit);fit();
  // three passes while the photo shows: the live scene (fills the depth buffer), the photo over it, then the hall's
@@ -3608,7 +3609,7 @@ try{(function(){
  // free to orbit and zoom); leave it alone for a few seconds and the camera glides back into the shot
  let ex=0,exT=0,lastIn=0,uz=1,pin=null;const IDLE=7000;
  const atHall=()=>cur===3&&!tr&&!!M;
- const poke=()=>{if(!atHall()||(window.__GBhallTour&&window.__GBhallTour.on()))return;exT=1;lastIn=performance.now();};
+ const poke=()=>{};   // the live 3D hall no longer matches the render, so dragging at the hall keeps the photo
  canvas.addEventListener('pointermove',e=>{if(drag&&Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>6)poke();else if(drag&&exT)lastIn=performance.now();});
  canvas.addEventListener('pointerdown',()=>{if(exT)lastIn=performance.now();});
  canvas.addEventListener('touchstart',e=>{if(e.touches.length===2&&atHall()){const a=e.touches[0],b=e.touches[1];pin={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)||1,z:uz};drag=null;poke();}},{passive:true});
