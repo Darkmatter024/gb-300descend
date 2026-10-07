@@ -4641,6 +4641,7 @@ try{(function(){
   sc.screenSpaceCameraController.enableInputs=false;
   sc.globe.enableLighting=true;sc.globe.showGroundAtmosphere=true;sc.fog.enabled=true;
   sc.globe.baseColor=C.Color.fromCssColorString('#06121f');
+  if(TOKEN&&innerWidth<760){sc.fog.enabled=true;sc.fog.density=6e-4;sc.fog.screenSpaceErrorFactor=4;}
   // late-day light over the US East coast: the landing reads as dusk, which hands off cleanly to the night aerial
   widget.clock.currentTime=C.JulianDate.fromIso8601('2026-06-21T23:10:00Z');widget.clock.shouldAnimate=false;
   let TS=null;const small=innerWidth<760;
@@ -4655,7 +4656,7 @@ try{(function(){
   try{sc.atmosphere.lightIntensity=12;sc.atmosphere.dynamicLighting=C.DynamicAtmosphereLightingType.SUNLIGHT;}catch(_){}
   try{sc.skyAtmosphere.atmosphereLightIntensity=12;sc.skyAtmosphere.hueShift=-0.02;sc.skyAtmosphere.saturationShift=0.1;}catch(_){}
   sc.globe.atmosphereLightIntensity=12;sc.globe.dynamicAtmosphereLighting=true;sc.globe.dynamicAtmosphereLightingFromSun=true;
-  if(TOKEN){try{const grade=new C.PostProcessStage({name:'gbGrade',fragmentShader:`
+  if(TOKEN&&innerWidth>=760){try{const grade=new C.PostProcessStage({name:'gbGrade',fragmentShader:`
 uniform sampler2D colorTexture;uniform sampler2D depthTexture;uniform float hazeK;in vec2 v_textureCoordinates;
 void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDepth(depthTexture,v_textureCoordinates);
  vec3 col=c.rgb;
@@ -4673,11 +4674,12 @@ void main(){vec4 c=texture(colorTexture,v_textureCoordinates);float d=czm_readDe
   let spin=true;sc.preRender.addEventListener(()=>{if(spin)cam.rotate(C.Cartesian3.UNIT_Z,-0.0009);
     const h=cam.positionCartographic.height;alt.textContent='Altitude '+fmt(h);});
   timers.push(setTimeout(()=>{if(done)return;spin=false;cap.classList.add('on');
-    cam.flyTo({destination:TOKEN?C.Cartesian3.fromDegrees(-77.4668,38.9978,1350):C.Cartesian3.fromDegrees(-77.462,38.978,1600),
-      orientation:{heading:C.Math.toRadians(TOKEN?18:345),pitch:C.Math.toRadians(TOKEN?-31:-42),roll:0},
+    const PH=TOKEN&&innerWidth<760;
+    cam.flyTo({destination:TOKEN?(PH?C.Cartesian3.fromDegrees(-77.4618,39.0085,620):C.Cartesian3.fromDegrees(-77.4668,38.9978,1350)):C.Cartesian3.fromDegrees(-77.462,38.978,1600),
+      orientation:{heading:C.Math.toRadians(TOKEN?(PH?15:18):345),pitch:C.Math.toRadians(TOKEN?(PH?-48:-31):-42),roll:0},
       duration:TOKEN?9:7.5,easingFunction:C.EasingFunction.QUINTIC_IN_OUT,
       complete:()=>{
-        if(!TOKEN){timers.push(setTimeout(()=>{cap.classList.remove('on');release(false);},1400));return;}
+        if(!TOKEN||innerWidth<760){timers.push(setTimeout(()=>{cap.classList.remove('on');release(false);},TOKEN?2200:1400));return;}
         // slow cinematic arc around the campus centre, then hand off once the sharp tiles are in (or after 5 s)
         const tgt=C.Cartesian3.fromDegrees(-77.4585,39.0165,80);const t0=performance.now();let h0=null,r0=null,p0=null;
         const arc=sc.preRender.addEventListener(()=>{if(done){arc();return;}
