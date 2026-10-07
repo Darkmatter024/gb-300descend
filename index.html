@@ -4640,7 +4640,17 @@ try{(function(){
   // late-day light over the US East coast: the landing reads as dusk, which hands off cleanly to the night aerial
   widget.clock.currentTime=C.JulianDate.fromIso8601('2026-06-21T23:10:00Z');widget.clock.shouldAnimate=false;
   if(TOKEN){C.createGooglePhotorealistic3DTileset().then(ts=>{if(done)return;sc.primitives.add(ts);sc.globe.show=false;}).catch(()=>{});}
-  if(innerWidth<760)widget.resolutionScale=Math.min(1,1.6/(devicePixelRatio||1));
+  // full device resolution (capped at 2x for frame rate), sharper tiles, HDR, MSAA + FXAA, softer bloom on city light
+  widget.useBrowserRecommendedResolution=false;widget.resolutionScale=Math.min(2,devicePixelRatio||1);
+  sc.globe.maximumScreenSpaceError=1.5;sc.globe.tileCacheSize=300;
+  try{sc.highDynamicRange=true;}catch(_){}
+  try{sc.msaaSamples=4;}catch(_){}
+  try{sc.postProcessStages.fxaa.enabled=true;}catch(_){}
+  try{const bl=sc.postProcessStages.bloom;bl.enabled=true;bl.uniforms.glowOnly=false;bl.uniforms.contrast=119;bl.uniforms.brightness=-0.35;bl.uniforms.delta=1.0;bl.uniforms.sigma=2.2;bl.uniforms.stepSize=1.0;}catch(_){}
+  try{sc.atmosphere.lightIntensity=12;sc.atmosphere.dynamicLighting=C.DynamicAtmosphereLightingType.SUNLIGHT;}catch(_){}
+  try{sc.skyAtmosphere.atmosphereLightIntensity=12;sc.skyAtmosphere.hueShift=-0.02;sc.skyAtmosphere.saturationShift=0.1;}catch(_){}
+  sc.globe.atmosphereLightIntensity=12;sc.globe.dynamicAtmosphereLighting=true;sc.globe.dynamicAtmosphereLightingFromSun=true;
+  sc.globe.nightFadeOutDistance=1.2e7;sc.globe.nightFadeInDistance=5e7;
   cam.setView({destination:C.Cartesian3.fromDegrees(-48,24,21000000)});
   const cap=wrap.querySelector('.gcap'),alt=wrap.querySelector('.galt');
   const fmt=h=>h>=10000?Math.round(h/1000).toLocaleString()+' km':Math.round(h).toLocaleString()+' m';
